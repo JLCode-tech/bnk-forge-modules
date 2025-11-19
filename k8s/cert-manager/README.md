@@ -2,24 +2,25 @@
 
 ## Description
 
-BNK Application module for cert-manager.
+Kubernetes module for cert-manager - automated certificate management for Kubernetes.
 
 ## Category
 
-- **Type**: BNK Application
+- **Type**: Kubernetes
 - **Provider**: Cloud-agnostic
-- **Workflow Compatibility**: Greenfield, Partial, Minimal
+- **Workflow Compatibility**: Greenfield, Partial
 
 ## Requirements
 
 - Terraform >= 1.0
 - Terragrunt >= 0.45
+- Kubernetes cluster
 
 ## Usage
 
 ```hcl
 terraform {
-  source = "git::https://github.com/JLCode-tech/bnk-forge-modules.git//bnk/cert-manager?ref=v1.0.0"
+  source = "git::https://github.com/JLCode-tech/bnk-forge-modules.git//k8s/cert-manager?ref=v1.0.0"
 }
 
 inputs = {

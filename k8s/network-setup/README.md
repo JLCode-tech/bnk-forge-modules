@@ -2,24 +2,25 @@
 
 ## Description
 
-BNK Application module for network-setup.
+Kubernetes module for network configuration - sets up network policies, NetworkAttachmentDefinitions for Multus.
 
 ## Category
 
-- **Type**: BNK Application
+- **Type**: Kubernetes
 - **Provider**: Cloud-agnostic
-- **Workflow Compatibility**: Greenfield, Partial, Minimal
+- **Workflow Compatibility**: Greenfield, Partial
 
 ## Requirements
 
 - Terraform >= 1.0
 - Terragrunt >= 0.45
+- Kubernetes cluster with Multus CNI
 
 ## Usage
 
 ```hcl
 terraform {
-  source = "git::https://github.com/JLCode-tech/bnk-forge-modules.git//bnk/network-setup?ref=v1.0.0"
+  source = "git::https://github.com/JLCode-tech/bnk-forge-modules.git//k8s/network-setup?ref=v1.0.0"
 }
 
 inputs = {
