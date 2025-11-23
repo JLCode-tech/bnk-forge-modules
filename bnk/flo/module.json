@@ -1,0 +1,168 @@
+{
+  "module": {
+    "name": "F5 Lifecycle Operator (FLO)",
+    "path": "bnk/flo",
+    "version": "1.0.0",
+    "layer": "bnk-platform",
+    "category": "platform",
+    "description": "Deploys F5 Lifecycle Operator to manage BNK components and CRDs. Core component required for all BNK Gateway API deployments.",
+    "cloud_specific": false,
+    "supported_platforms": ["any"]
+  },
+  "dependencies": {
+    "required": [
+      {
+        "module": "bnk/far-setup",
+        "reason": "Provides F5 registry authentication and component versions"
+      }
+    ],
+    "optional": [
+      {
+        "module": "k8s/cert-manager",
+        "reason": "Provides certificate management for FLO webhooks",
+        "provides": "Automated certificate management for CRD conversion webhooks"
+      }
+    ]
+  },
+  "inputs": {
+    "required": [
+      {
+        "name": "cluster_name",
+        "type": "string",
+        "description": "Name of the Kubernetes cluster (used for resource naming and identification)",
+        "source": "module",
+        "from_module": "infra/aws/eks",
+        "from_output": "cluster_name",
+        "example": "my-eks-cluster"
+      },
+      {
+        "name": "flo_namespace",
+        "type": "string",
+        "description": "Namespace for FLO deployment",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "spk_namespace",
+        "example": "f5-spk"
+      },
+      {
+        "name": "flo_version",
+        "type": "string",
+        "description": "FLO Helm chart version",
+        "source": "auto",
+        "example": "2.1.0"
+      },
+      {
+        "name": "far_secret_name",
+        "type": "string",
+        "description": "Name of the FAR registry secret",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "far_secret_name",
+        "example": "far-secret"
+      },
+      {
+        "name": "license_mode",
+        "type": "string",
+        "description": "FLO licensing mode (connected or disconnected)",
+        "source": "user",
+        "example": "connected"
+      }
+    ],
+    "optional": [
+      {
+        "name": "enable_ipam_operator",
+        "type": "boolean",
+        "description": "Enable F5 IPAM operator for automatic IP assignment to Gateways",
+        "default": false,
+        "source": "user"
+      },
+      {
+        "name": "license_jwt_token",
+        "type": "string",
+        "description": "F5 license JWT token (required for connected mode)",
+        "default": "",
+        "source": "user",
+        "sensitive": true
+      },
+      {
+        "name": "cert_manager_ready",
+        "type": "boolean",
+        "description": "Dependency flag for cert-manager",
+        "default": true,
+        "source": "module",
+        "from_module": "k8s/cert-manager",
+        "from_output": "cert_manager_ready"
+      },
+      {
+        "name": "common_labels",
+        "type": "map(string)",
+        "description": "Common labels to apply to all Kubernetes resources",
+        "default": {},
+        "source": "user"
+      }
+    ]
+  },
+  "outputs": {
+    "key_outputs": [
+      {
+        "name": "flo_ready",
+        "type": "boolean",
+        "description": "Flag indicating FLO is ready for dependent modules",
+        "used_by": [
+          "bnk/bnk-gatewayclass",
+          "bnk/gateway",
+          "bnk/routes",
+          "bnk/bnk-secpolicy",
+          "bnk/bnk-netpolicy"
+        ],
+        "sensitive": false
+      },
+      {
+        "name": "flo_namespace",
+        "type": "string",
+        "description": "Namespace where FLO is deployed",
+        "used_by": ["bnk/bnk-gatewayclass"],
+        "sensitive": false
+      },
+      {
+        "name": "crds_installed",
+        "type": "boolean",
+        "description": "Flag indicating Gateway API CRDs are installed by FLO",
+        "used_by": ["bnk/bnk-gatewayclass", "bnk/gateway", "bnk/routes"],
+        "sensitive": false
+      },
+      {
+        "name": "license_mode",
+        "type": "string",
+        "description": "Configured licensing mode",
+        "used_by": [],
+        "sensitive": false
+      },
+      {
+        "name": "ipam_namespace",
+        "type": "string",
+        "description": "Namespace where IPAM operator is deployed (if enabled)",
+        "used_by": ["bnk/gateway"],
+        "sensitive": false
+      }
+    ]
+  },
+  "providers": {
+    "required": ["kubernetes", "helm"],
+    "optional": ["time", "null"]
+  },
+  "backend": {
+    "recommendations": {
+      "aws": "s3",
+      "azure": "azurerm",
+      "gcp": "gcs",
+      "on-prem": "local"
+    }
+  },
+  "deployment": {
+    "order": 50,
+    "estimated_time": "3 minutes",
+    "requires_user_input": true,
+    "sensitive_inputs": ["license_jwt_token"]
+  }
+}
