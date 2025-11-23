@@ -2,18 +2,6 @@
 # BNKGatewayClass - Gateway API resource for BIG-IP Next
 
 # =============================================================================
-# EKS CLUSTER DATA SOURCES
-# =============================================================================
-
-data "aws_eks_cluster" "cluster" {
-  name = var.cluster_name
-}
-
-data "aws_eks_cluster_auth" "cluster" {
-  name = var.cluster_name
-}
-
-# =============================================================================
 # BNK GATEWAY CLASS CUSTOM RESOURCE
 # =============================================================================
 
