@@ -79,6 +79,6 @@ variable "common_labels" {
 # =============================================================================
 
 variable "cluster_name" {
-  description = "EKS cluster name for dependency tracking"
+  description = "Name of the Kubernetes cluster (used for resource naming and identification)"
   type        = string
 }

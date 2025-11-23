@@ -1,7 +1,7 @@
 # infrastructure-modules/spk-2.1/crds/service-proxy/variables.tf
 
 variable "cluster_name" {
-  description = "EKS cluster name"
+  description = "Name of the Kubernetes cluster (used for resource naming and identification)"
   type        = string
 }
 

@@ -5,7 +5,7 @@
 # ========================================================================
 
 variable "cluster_name" {
-  description = "Name of the EKS cluster"
+  description = "Name of the Kubernetes cluster (used for resource naming and identification)"
   type        = string
 }
 

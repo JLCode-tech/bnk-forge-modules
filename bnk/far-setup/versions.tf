@@ -3,8 +3,6 @@
 terraform {
   required_version = ">= 1.0"
 
-  backend "s3" {}
-
   required_providers {
     kubernetes = {
       source  = "hashicorp/kubernetes"
@@ -22,20 +20,5 @@ terraform {
       source  = "hashicorp/local"
       version = "~> 2.4"
     }
-  }
-}
-
-# Provider configurations
-provider "kubernetes" {
-  host                   = data.aws_eks_cluster.cluster.endpoint
-  cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority[0].data)
-  token                  = data.aws_eks_cluster_auth.cluster.token
-}
-
-provider "helm" {
-  kubernetes {
-    host                   = data.aws_eks_cluster.cluster.endpoint
-    cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority[0].data)
-    token                  = data.aws_eks_cluster_auth.cluster.token
   }
 }
