@@ -1,0 +1,87 @@
+{
+  "module": {
+    "name": "BNK Common CRDs",
+    "path": "bnk/crds/common",
+    "version": "1.0.0",
+    "layer": "bnk-foundation",
+    "category": "crds",
+    "description": "Installs common Custom Resource Definitions (CRDs) required by BNK components. These CRDs define the Kubernetes API extensions for BNK functionality.",
+    "cloud_specific": false,
+    "supported_platforms": ["any"]
+  },
+  "dependencies": {
+    "required": [
+      {
+        "module": "bnk/far-setup",
+        "reason": "Provides registry authentication and CRD version information"
+      }
+    ],
+    "optional": []
+  },
+  "inputs": {
+    "required": [
+      {
+        "name": "cluster_name",
+        "type": "string",
+        "description": "Name of the Kubernetes cluster (used for resource identification)",
+        "source": "user",
+        "example": "my-cluster"
+      },
+      {
+        "name": "crd_common_version",
+        "type": "string",
+        "description": "Version of common CRDs to install",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "crds_versions",
+        "example": "0.1.27"
+      },
+      {
+        "name": "far_setup_complete",
+        "type": "boolean",
+        "description": "Dependency flag ensuring FAR setup is complete",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "setup_complete",
+        "example": true
+      }
+    ],
+    "optional": []
+  },
+  "outputs": {
+    "key_outputs": [
+      {
+        "name": "crds_ready",
+        "type": "boolean",
+        "description": "Flag indicating common CRDs are installed",
+        "used_by": ["bnk/cwc", "bnk/dssm", "bnk/fluentd"],
+        "sensitive": false
+      },
+      {
+        "name": "crd_list",
+        "type": "list(string)",
+        "description": "List of installed CRD names",
+        "used_by": [],
+        "sensitive": false
+      }
+    ]
+  },
+  "providers": {
+    "required": ["kubernetes"],
+    "optional": []
+  },
+  "backend": {
+    "recommendations": {
+      "aws": "s3",
+      "azure": "azurerm",
+      "gcp": "gcs",
+      "on-prem": "local"
+    }
+  },
+  "deployment": {
+    "order": 41,
+    "estimated_time": "1 minute",
+    "requires_user_input": false,
+    "sensitive_inputs": []
+  }
+}

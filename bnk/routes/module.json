@@ -1,0 +1,184 @@
+{
+  "module": {
+    "name": "BNK Routes",
+    "path": "bnk/routes",
+    "version": "1.0.0",
+    "layer": "bnk-gateway",
+    "category": "routing",
+    "description": "Creates Kubernetes Gateway API Route resources (HTTPRoute, GRPCRoute, TCPRoute, UDPRoute) for application traffic routing through BNK Gateway.",
+    "cloud_specific": false,
+    "supported_platforms": ["any"]
+  },
+  "dependencies": {
+    "required": [
+      {
+        "module": "bnk/gateway",
+        "reason": "Routes must attach to an existing Gateway"
+      }
+    ],
+    "optional": []
+  },
+  "inputs": {
+    "required": [
+      {
+        "name": "cluster_name",
+        "type": "string",
+        "description": "Name of the Kubernetes cluster (used for resource identification)",
+        "source": "user",
+        "example": "my-cluster"
+      },
+      {
+        "name": "route_name",
+        "type": "string",
+        "description": "Name for the Route resource",
+        "source": "user",
+        "example": "my-app-route"
+      },
+      {
+        "name": "route_namespace",
+        "type": "string",
+        "description": "Namespace for Route deployment",
+        "source": "user",
+        "example": "default"
+      },
+      {
+        "name": "gateway_name",
+        "type": "string",
+        "description": "Name of the Gateway to attach to",
+        "source": "module",
+        "from_module": "bnk/gateway",
+        "from_output": "gateway_name",
+        "example": "bnk-gateway"
+      },
+      {
+        "name": "route_type",
+        "type": "string",
+        "description": "Type of route (HTTPRoute, GRPCRoute, TCPRoute, UDPRoute, TLSRoute)",
+        "source": "user",
+        "example": "HTTPRoute"
+      },
+      {
+        "name": "routing_rules",
+        "type": "list(object)",
+        "description": "List of routing rules (matches, filters, backend_refs)",
+        "source": "user",
+        "example": [
+          {
+            "matches": [
+              {
+                "path": {
+                  "type": "PathPrefix",
+                  "value": "/api"
+                }
+              }
+            ],
+            "backend_refs": [
+              {
+                "name": "api-service",
+                "port": 8080
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "flo_ready",
+        "type": "boolean",
+        "description": "Dependency flag ensuring FLO is ready",
+        "source": "module",
+        "from_module": "bnk/flo",
+        "from_output": "flo_ready",
+        "example": true
+      }
+    ],
+    "optional": [
+      {
+        "name": "hostnames",
+        "type": "list(string)",
+        "description": "Hostnames for route matching",
+        "default": [],
+        "source": "user"
+      },
+      {
+        "name": "gateway_namespace",
+        "type": "string",
+        "description": "Namespace of the Gateway (if different from route namespace)",
+        "default": "",
+        "source": "module",
+        "from_module": "bnk/gateway",
+        "from_output": "gateway_namespace"
+      },
+      {
+        "name": "timeout",
+        "type": "string",
+        "description": "Request timeout duration",
+        "default": "30s",
+        "source": "user"
+      },
+      {
+        "name": "retry_policy",
+        "type": "object",
+        "description": "Retry policy configuration",
+        "default": null,
+        "source": "user"
+      },
+      {
+        "name": "common_labels",
+        "type": "map(string)",
+        "description": "Common labels to apply to Route",
+        "default": {},
+        "source": "user"
+      }
+    ]
+  },
+  "outputs": {
+    "key_outputs": [
+      {
+        "name": "route_ready",
+        "type": "boolean",
+        "description": "Flag indicating Route is accepted and programmed",
+        "used_by": [],
+        "sensitive": false
+      },
+      {
+        "name": "route_name",
+        "type": "string",
+        "description": "Name of the created Route",
+        "used_by": [],
+        "sensitive": false
+      },
+      {
+        "name": "route_namespace",
+        "type": "string",
+        "description": "Namespace where Route is deployed",
+        "used_by": [],
+        "sensitive": false
+      },
+      {
+        "name": "parent_refs",
+        "type": "list(string)",
+        "description": "List of parent Gateway references",
+        "used_by": [],
+        "sensitive": false
+      }
+    ]
+  },
+  "providers": {
+    "required": ["kubernetes"],
+    "optional": []
+  },
+  "backend": {
+    "recommendations": {
+      "aws": "s3",
+      "azure": "azurerm",
+      "gcp": "gcs",
+      "on-prem": "local"
+    }
+  },
+  "deployment": {
+    "order": 80,
+    "estimated_time": "2 minutes",
+    "requires_user_input": true,
+    "sensitive_inputs": []
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "module": {
+    "name": "BNK Network Policy",
+    "path": "bnk/bnk-netpolicy",
+    "version": "1.0.0",
+    "layer": "bnk-policy",
+    "category": "networking",
+    "description": "Creates BNK NetworkPolicy custom resources for advanced L4-L7 network policies (connection limits, timeouts, TCP/UDP settings) that attach to Gateway API resources.",
+    "cloud_specific": false,
+    "supported_platforms": ["any"]
+  },
+  "dependencies": {
+    "required": [
+      {
+        "module": "bnk/flo",
+        "reason": "FLO provides BNK NetworkPolicy CRD and controller"
+      }
+    ],
+    "optional": [
+      {
+        "module": "bnk/gateway",
+        "reason": "NetworkPolicy typically attaches to Gateway",
+        "provides": "Gateway attachment point for network policies"
+      }
+    ]
+  },
+  "inputs": {
+    "required": [
+      {
+        "name": "cluster_name",
+        "type": "string",
+        "description": "Name of the Kubernetes cluster (used for resource identification)",
+        "source": "user",
+        "example": "my-cluster"
+      },
+      {
+        "name": "policy_name",
+        "type": "string",
+        "description": "Name for the NetworkPolicy resource",
+        "source": "user",
+        "example": "my-network-policy"
+      },
+      {
+        "name": "policy_namespace",
+        "type": "string",
+        "description": "Namespace for NetworkPolicy deployment",
+        "source": "user",
+        "example": "default"
+      },
+      {
+        "name": "flo_ready",
+        "type": "boolean",
+        "description": "Dependency flag ensuring FLO is ready",
+        "source": "module",
+        "from_module": "bnk/flo",
+        "from_output": "flo_ready",
+        "example": true
+      },
+      {
+        "name": "network_settings",
+        "type": "object",
+        "description": "Network policy settings (connection limits, timeouts, TCP options)",
+        "source": "user",
+        "example": {
+          "connection_limit": 10000,
+          "idle_timeout": "300s",
+          "tcp_keepalive": true
+        }
+      }
+    ],
+    "optional": [
+      {
+        "name": "target_ref",
+        "type": "object",
+        "description": "Target reference (Gateway, Route, or Service)",
+        "default": null,
+        "source": "user"
+      },
+      {
+        "name": "enable_ipv6",
+        "type": "boolean",
+        "description": "Enable IPv6 support",
+        "default": false,
+        "source": "user"
+      },
+      {
+        "name": "enable_proxy_protocol",
+        "type": "boolean",
+        "description": "Enable PROXY protocol support",
+        "default": false,
+        "source": "user"
+      },
+      {
+        "name": "session_persistence",
+        "type": "object",
+        "description": "Session persistence configuration",
+        "default": null,
+        "source": "user"
+      },
+      {
+        "name": "common_labels",
+        "type": "map(string)",
+        "description": "Common labels to apply to NetworkPolicy",
+        "default": {},
+        "source": "user"
+      }
+    ]
+  },
+  "outputs": {
+    "key_outputs": [
+      {
+        "name": "policy_ready",
+        "type": "boolean",
+        "description": "Flag indicating NetworkPolicy is accepted and active",
+        "used_by": [],
+        "sensitive": false
+      },
+      {
+        "name": "policy_name",
+        "type": "string",
+        "description": "Name of the created NetworkPolicy",
+        "used_by": [],
+        "sensitive": false
+      },
+      {
+        "name": "policy_namespace",
+        "type": "string",
+        "description": "Namespace where NetworkPolicy is deployed",
+        "used_by": [],
+        "sensitive": false
+      }
+    ]
+  },
+  "providers": {
+    "required": ["kubernetes"],
+    "optional": []
+  },
+  "backend": {
+    "recommendations": {
+      "aws": "s3",
+      "azure": "azurerm",
+      "gcp": "gcs",
+      "on-prem": "local"
+    }
+  },
+  "deployment": {
+    "order": 91,
+    "estimated_time": "2 minutes",
+    "requires_user_input": true,
+    "sensitive_inputs": []
+  }
+}

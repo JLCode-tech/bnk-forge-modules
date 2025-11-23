@@ -1,0 +1,170 @@
+{
+  "module": {
+    "name": "BNK Gateway",
+    "path": "bnk/gateway",
+    "version": "1.0.0",
+    "layer": "bnk-gateway",
+    "category": "gateway",
+    "description": "Creates Kubernetes Gateway API Gateway resource. Defines listeners (HTTP, HTTPS, TCP, UDP) and deploys TMM instances for traffic management.",
+    "cloud_specific": false,
+    "supported_platforms": ["any"]
+  },
+  "dependencies": {
+    "required": [
+      {
+        "module": "bnk/bnk-gatewayclass",
+        "reason": "Gateway must reference a valid GatewayClass"
+      }
+    ],
+    "optional": []
+  },
+  "inputs": {
+    "required": [
+      {
+        "name": "cluster_name",
+        "type": "string",
+        "description": "Name of the Kubernetes cluster (used for resource identification)",
+        "source": "user",
+        "example": "my-cluster"
+      },
+      {
+        "name": "gateway_name",
+        "type": "string",
+        "description": "Name for the Gateway resource",
+        "source": "user",
+        "example": "bnk-gateway"
+      },
+      {
+        "name": "gateway_namespace",
+        "type": "string",
+        "description": "Namespace for Gateway deployment",
+        "source": "user",
+        "example": "default"
+      },
+      {
+        "name": "gatewayclass_name",
+        "type": "string",
+        "description": "Name of the GatewayClass to use",
+        "source": "module",
+        "from_module": "bnk/bnk-gatewayclass",
+        "from_output": "gatewayclass_name",
+        "example": "bnk-gatewayclass"
+      },
+      {
+        "name": "listeners",
+        "type": "list(object)",
+        "description": "List of listener configurations (name, protocol, port, hostname)",
+        "source": "user",
+        "example": [
+          {
+            "name": "http",
+            "protocol": "HTTP",
+            "port": 80
+          },
+          {
+            "name": "https",
+            "protocol": "HTTPS",
+            "port": 443,
+            "hostname": "*.example.com"
+          }
+        ]
+      },
+      {
+        "name": "flo_ready",
+        "type": "boolean",
+        "description": "Dependency flag ensuring FLO is ready",
+        "source": "module",
+        "from_module": "bnk/flo",
+        "from_output": "flo_ready",
+        "example": true
+      }
+    ],
+    "optional": [
+      {
+        "name": "service_type",
+        "type": "string",
+        "description": "Kubernetes service type for Gateway (LoadBalancer, NodePort, ClusterIP)",
+        "default": "LoadBalancer",
+        "source": "user"
+      },
+      {
+        "name": "service_annotations",
+        "type": "map(string)",
+        "description": "Annotations for Gateway service (e.g., AWS Load Balancer annotations)",
+        "default": {},
+        "source": "user"
+      },
+      {
+        "name": "enable_http2",
+        "type": "boolean",
+        "description": "Enable HTTP/2 support",
+        "default": true,
+        "source": "user"
+      },
+      {
+        "name": "tls_certificate_refs",
+        "type": "list(object)",
+        "description": "TLS certificate secret references for HTTPS listeners",
+        "default": [],
+        "source": "user"
+      },
+      {
+        "name": "common_labels",
+        "type": "map(string)",
+        "description": "Common labels to apply to Gateway",
+        "default": {},
+        "source": "user"
+      }
+    ]
+  },
+  "outputs": {
+    "key_outputs": [
+      {
+        "name": "gateway_name",
+        "type": "string",
+        "description": "Name of the created Gateway",
+        "used_by": ["bnk/routes", "bnk/bnk-secpolicy", "bnk/bnk-netpolicy"],
+        "sensitive": false
+      },
+      {
+        "name": "gateway_ready",
+        "type": "boolean",
+        "description": "Flag indicating Gateway is programmed and ready",
+        "used_by": ["bnk/routes"],
+        "sensitive": false
+      },
+      {
+        "name": "gateway_addresses",
+        "type": "list(string)",
+        "description": "IP addresses or hostnames assigned to Gateway",
+        "used_by": [],
+        "sensitive": false
+      },
+      {
+        "name": "gateway_namespace",
+        "type": "string",
+        "description": "Namespace where Gateway is deployed",
+        "used_by": ["bnk/routes"],
+        "sensitive": false
+      }
+    ]
+  },
+  "providers": {
+    "required": ["kubernetes"],
+    "optional": []
+  },
+  "backend": {
+    "recommendations": {
+      "aws": "s3",
+      "azure": "azurerm",
+      "gcp": "gcs",
+      "on-prem": "local"
+    }
+  },
+  "deployment": {
+    "order": 70,
+    "estimated_time": "5 minutes",
+    "requires_user_input": true,
+    "sensitive_inputs": []
+  }
+}

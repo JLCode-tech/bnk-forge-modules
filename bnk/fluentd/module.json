@@ -1,0 +1,170 @@
+{
+  "module": {
+    "name": "Fluentd Log Aggregation",
+    "path": "bnk/fluentd",
+    "version": "1.0.0",
+    "layer": "bnk-platform",
+    "category": "observability",
+    "description": "Deploys Fluentd for centralized log collection and aggregation from BNK components. Optional for logging and monitoring.",
+    "cloud_specific": false,
+    "supported_platforms": ["any"]
+  },
+  "dependencies": {
+    "required": [
+      {
+        "module": "bnk/far-setup",
+        "reason": "Provides registry authentication and Fluentd version"
+      },
+      {
+        "module": "infra/aws/storage",
+        "reason": "Provides persistent storage for log buffers",
+        "cloud_specific": true
+      }
+    ],
+    "optional": [
+      {
+        "module": "k8s/cert-manager",
+        "reason": "Provides certificates for secure log shipping",
+        "provides": "TLS for log aggregation"
+      }
+    ]
+  },
+  "inputs": {
+    "required": [
+      {
+        "name": "cluster_name",
+        "type": "string",
+        "description": "Name of the Kubernetes cluster (used for resource identification)",
+        "source": "user",
+        "example": "my-cluster"
+      },
+      {
+        "name": "namespace",
+        "type": "string",
+        "description": "Namespace for Fluentd deployment",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "spk_namespace",
+        "example": "f5-spk"
+      },
+      {
+        "name": "fluentd_version",
+        "type": "string",
+        "description": "Fluentd Helm chart version",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "fluentd_version",
+        "example": "1.16.0"
+      },
+      {
+        "name": "far_secret_name",
+        "type": "string",
+        "description": "Name of the FAR registry secret",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "far_secret_name",
+        "example": "far-secret"
+      },
+      {
+        "name": "storage_class",
+        "type": "string",
+        "description": "Storage class for log buffer persistent volumes",
+        "source": "module",
+        "from_module": "infra/aws/storage",
+        "from_output": "default_storage_class_name",
+        "example": "gp3"
+      },
+      {
+        "name": "far_setup_complete",
+        "type": "boolean",
+        "description": "Dependency flag ensuring FAR setup is complete",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "setup_complete",
+        "example": true
+      }
+    ],
+    "optional": [
+      {
+        "name": "cert_manager_complete",
+        "type": "boolean",
+        "description": "Dependency flag for cert-manager (for TLS)",
+        "default": false,
+        "source": "module",
+        "from_module": "k8s/cert-manager",
+        "from_output": "cert_manager_ready"
+      },
+      {
+        "name": "buffer_storage_size",
+        "type": "string",
+        "description": "Size of persistent volume for log buffers",
+        "default": "10Gi",
+        "source": "user"
+      },
+      {
+        "name": "log_level",
+        "type": "string",
+        "description": "Fluentd log level",
+        "default": "info",
+        "source": "user"
+      },
+      {
+        "name": "enable_prometheus_metrics",
+        "type": "boolean",
+        "description": "Enable Prometheus metrics endpoint",
+        "default": true,
+        "source": "user"
+      },
+      {
+        "name": "common_labels",
+        "type": "map(string)",
+        "description": "Common labels to apply to all resources",
+        "default": {},
+        "source": "user"
+      }
+    ]
+  },
+  "outputs": {
+    "key_outputs": [
+      {
+        "name": "fluentd_ready",
+        "type": "boolean",
+        "description": "Flag indicating Fluentd is deployed and ready",
+        "used_by": ["bnk/f5-controller"],
+        "sensitive": false
+      },
+      {
+        "name": "fluentd_service_host",
+        "type": "string",
+        "description": "Fluentd service hostname for log forwarding",
+        "used_by": ["bnk/f5-controller"],
+        "sensitive": false
+      },
+      {
+        "name": "fluentd_service_port",
+        "type": "number",
+        "description": "Fluentd service port",
+        "used_by": ["bnk/f5-controller"],
+        "sensitive": false
+      }
+    ]
+  },
+  "providers": {
+    "required": ["kubernetes", "helm"],
+    "optional": []
+  },
+  "backend": {
+    "recommendations": {
+      "aws": "s3",
+      "azure": "azurerm",
+      "gcp": "gcs",
+      "on-prem": "local"
+    }
+  },
+  "deployment": {
+    "order": 49,
+    "estimated_time": "4 minutes",
+    "requires_user_input": false,
+    "sensitive_inputs": []
+  }
+}

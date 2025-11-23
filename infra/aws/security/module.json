@@ -1,0 +1,164 @@
+{
+  "module": {
+    "name": "AWS Security & IAM",
+    "path": "infra/aws/security",
+    "version": "1.0.0",
+    "layer": "infrastructure",
+    "category": "security",
+    "description": "Creates IAM roles, security groups, and SSH key pair for EKS cluster and infrastructure access. Includes optional jumphost deployment.",
+    "cloud_specific": true,
+    "supported_platforms": ["aws"]
+  },
+  "dependencies": {
+    "required": [
+      {
+        "module": "infra/aws/vpc",
+        "reason": "Requires VPC for security group and jumphost placement"
+      }
+    ],
+    "optional": []
+  },
+  "inputs": {
+    "required": [
+      {
+        "name": "project_name",
+        "type": "string",
+        "description": "Name of the project (used for resource naming)",
+        "source": "user",
+        "example": "my-bnk-project"
+      },
+      {
+        "name": "environment",
+        "type": "string",
+        "description": "Environment name (dev, staging, prod)",
+        "source": "user",
+        "example": "dev"
+      },
+      {
+        "name": "vpc_id",
+        "type": "string",
+        "description": "ID of the VPC for security group creation",
+        "source": "module",
+        "from_module": "infra/aws/vpc",
+        "from_output": "vpc_id",
+        "example": "vpc-12345678"
+      },
+      {
+        "name": "vpc_cidr_block",
+        "type": "string",
+        "description": "CIDR block of the VPC for security group ingress rules",
+        "source": "module",
+        "from_module": "infra/aws/vpc",
+        "from_output": "vpc_cidr_block",
+        "example": "10.0.0.0/16"
+      },
+      {
+        "name": "public_subnet_id",
+        "type": "string",
+        "description": "Public subnet ID for jumphost deployment",
+        "source": "module",
+        "from_module": "infra/aws/vpc",
+        "from_output": "public_subnet_ids",
+        "example": "subnet-12345678"
+      },
+      {
+        "name": "user_ip",
+        "type": "string",
+        "description": "Your public IP address for SSH access to jumphost (CIDR format)",
+        "source": "user",
+        "example": "203.0.113.10/32"
+      }
+    ],
+    "optional": [
+      {
+        "name": "enable_oidc_provider",
+        "type": "boolean",
+        "description": "Create IAM OIDC provider for EKS service accounts",
+        "default": true,
+        "source": "user"
+      },
+      {
+        "name": "deploy_jumphost",
+        "type": "boolean",
+        "description": "Deploy EC2 jumphost for cluster access",
+        "default": true,
+        "source": "user"
+      },
+      {
+        "name": "jumphost_instance_type",
+        "type": "string",
+        "description": "EC2 instance type for jumphost",
+        "default": "t3.micro",
+        "source": "user"
+      },
+      {
+        "name": "common_tags",
+        "type": "map(string)",
+        "description": "Common tags to apply to all resources",
+        "default": {},
+        "source": "user"
+      }
+    ]
+  },
+  "outputs": {
+    "key_outputs": [
+      {
+        "name": "infrastructure_key_name",
+        "type": "string",
+        "description": "Name of the SSH key pair for infrastructure access",
+        "used_by": ["infra/aws/eks", "infra/aws/high-performance-nodes"],
+        "sensitive": false
+      },
+      {
+        "name": "vpc_security_group_id",
+        "type": "string",
+        "description": "ID of the VPC security group for EKS cluster",
+        "used_by": ["infra/aws/eks", "infra/aws/high-performance-nodes"],
+        "sensitive": false
+      },
+      {
+        "name": "eks_cluster_role_arn",
+        "type": "string",
+        "description": "ARN of the IAM role for EKS cluster",
+        "used_by": ["infra/aws/eks"],
+        "sensitive": false
+      },
+      {
+        "name": "nodegroup_role_arn",
+        "type": "string",
+        "description": "ARN of the IAM role for EKS node groups",
+        "used_by": ["infra/aws/eks", "infra/aws/high-performance-nodes"],
+        "sensitive": false
+      },
+      {
+        "name": "jumphost_public_ip",
+        "type": "string",
+        "description": "Public IP address of the jumphost (if deployed)",
+        "used_by": [],
+        "sensitive": false
+      },
+      {
+        "name": "oidc_provider_arn",
+        "type": "string",
+        "description": "ARN of the IAM OIDC provider for EKS (if enabled)",
+        "used_by": ["infra/aws/eks"],
+        "sensitive": false
+      }
+    ]
+  },
+  "providers": {
+    "required": ["aws"],
+    "optional": []
+  },
+  "backend": {
+    "recommendations": {
+      "aws": "s3"
+    }
+  },
+  "deployment": {
+    "order": 2,
+    "estimated_time": "3 minutes",
+    "requires_user_input": true,
+    "sensitive_inputs": []
+  }
+}

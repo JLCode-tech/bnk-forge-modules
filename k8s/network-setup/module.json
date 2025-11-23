@@ -1,0 +1,135 @@
+{
+  "module": {
+    "name": "Kubernetes Network Setup (Multus NADs)",
+    "path": "k8s/network-setup",
+    "version": "1.0.0",
+    "layer": "kubernetes",
+    "category": "networking",
+    "description": "Creates Multus Network Attachment Definitions (NADs) for external and internal networks. Required for BNK legacy SPK controller mode with multiple network interfaces.",
+    "cloud_specific": false,
+    "supported_platforms": ["any"]
+  },
+  "dependencies": {
+    "required": [],
+    "optional": []
+  },
+  "inputs": {
+    "required": [
+      {
+        "name": "cluster_name",
+        "type": "string",
+        "description": "Name of the Kubernetes cluster (used for resource identification)",
+        "source": "user",
+        "example": "my-cluster"
+      },
+      {
+        "name": "namespace",
+        "type": "string",
+        "description": "Namespace for network attachment definitions",
+        "source": "user",
+        "example": "f5-spk"
+      },
+      {
+        "name": "external_subnet_cidrs",
+        "type": "list(string)",
+        "description": "CIDR blocks for external network subnets",
+        "source": "user",
+        "example": ["10.0.1.0/24", "10.0.2.0/24"]
+      },
+      {
+        "name": "internal_subnet_cidrs",
+        "type": "list(string)",
+        "description": "CIDR blocks for internal network subnets",
+        "source": "user",
+        "example": ["10.0.11.0/24", "10.0.12.0/24"]
+      }
+    ],
+    "optional": [
+      {
+        "name": "external_nad_name",
+        "type": "string",
+        "description": "Name for external network attachment definition",
+        "default": "external-net",
+        "source": "user"
+      },
+      {
+        "name": "internal_nad_name",
+        "type": "string",
+        "description": "Name for internal network attachment definition",
+        "default": "internal-net",
+        "source": "user"
+      },
+      {
+        "name": "cni_plugin",
+        "type": "string",
+        "description": "CNI plugin to use (macvlan, ipvlan, bridge)",
+        "default": "macvlan",
+        "source": "user"
+      },
+      {
+        "name": "enable_ipam",
+        "type": "boolean",
+        "description": "Enable IPAM (IP Address Management) for NADs",
+        "default": true,
+        "source": "user"
+      },
+      {
+        "name": "common_labels",
+        "type": "map(string)",
+        "description": "Common labels to apply to all NADs",
+        "default": {},
+        "source": "user"
+      }
+    ]
+  },
+  "outputs": {
+    "key_outputs": [
+      {
+        "name": "external_nad_name",
+        "type": "string",
+        "description": "Name of the external network attachment definition",
+        "used_by": ["bnk/f5-controller"],
+        "sensitive": false
+      },
+      {
+        "name": "internal_nad_name",
+        "type": "string",
+        "description": "Name of the internal network attachment definition",
+        "used_by": ["bnk/f5-controller"],
+        "sensitive": false
+      },
+      {
+        "name": "nads_ready",
+        "type": "boolean",
+        "description": "Flag indicating NADs are created and ready",
+        "used_by": ["bnk/f5-controller"],
+        "sensitive": false
+      },
+      {
+        "name": "namespace",
+        "type": "string",
+        "description": "Namespace where NADs are deployed",
+        "used_by": [],
+        "sensitive": false
+      }
+    ]
+  },
+  "providers": {
+    "required": ["kubernetes"],
+    "optional": []
+  },
+  "backend": {
+    "recommendations": {
+      "aws": "s3",
+      "azure": "azurerm",
+      "gcp": "gcs",
+      "on-prem": "local"
+    }
+  },
+  "deployment": {
+    "order": 20,
+    "estimated_time": "2 minutes",
+    "requires_user_input": true,
+    "sensitive_inputs": []
+  }
+}

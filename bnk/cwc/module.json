@@ -1,0 +1,175 @@
+{
+  "module": {
+    "name": "CWC (Central Web Console)",
+    "path": "bnk/cwc",
+    "version": "1.0.0",
+    "layer": "bnk-platform",
+    "category": "platform",
+    "description": "Deploys CWC (Central Web Console) for centralized multi-cluster management and monitoring. Includes RabbitMQ for messaging. Optional for single cluster deployments.",
+    "cloud_specific": false,
+    "supported_platforms": ["any"]
+  },
+  "dependencies": {
+    "required": [
+      {
+        "module": "bnk/far-setup",
+        "reason": "Provides registry authentication and CWC version"
+      },
+      {
+        "module": "k8s/cert-manager",
+        "reason": "Provides certificate management for CWC webhooks and TLS"
+      }
+    ],
+    "optional": []
+  },
+  "inputs": {
+    "required": [
+      {
+        "name": "cluster_name",
+        "type": "string",
+        "description": "Name of the Kubernetes cluster (used for resource identification)",
+        "source": "user",
+        "example": "my-cluster"
+      },
+      {
+        "name": "namespace",
+        "type": "string",
+        "description": "Namespace for CWC deployment",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "spk_namespace",
+        "example": "f5-spk"
+      },
+      {
+        "name": "cwc_version",
+        "type": "string",
+        "description": "CWC Helm chart version",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "cwc_version",
+        "example": "1.5.0"
+      },
+      {
+        "name": "rabbitmq_version",
+        "type": "string",
+        "description": "RabbitMQ version for messaging",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "cwc_version",
+        "example": "3.12"
+      },
+      {
+        "name": "far_secret_name",
+        "type": "string",
+        "description": "Name of the FAR registry secret",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "far_secret_name",
+        "example": "far-secret"
+      },
+      {
+        "name": "storage_class",
+        "type": "string",
+        "description": "Storage class for persistent data",
+        "source": "user",
+        "example": "gp3"
+      },
+      {
+        "name": "cert_manager_ready",
+        "type": "boolean",
+        "description": "Dependency flag ensuring cert-manager is ready",
+        "source": "module",
+        "from_module": "k8s/cert-manager",
+        "from_output": "cert_manager_ready",
+        "example": true
+      },
+      {
+        "name": "license_environment",
+        "type": "string",
+        "description": "Licensing environment (dev, staging, prod)",
+        "source": "user",
+        "example": "production"
+      },
+      {
+        "name": "connected_mode",
+        "type": "boolean",
+        "description": "Enable connected mode for licensing",
+        "source": "user",
+        "example": true
+      }
+    ],
+    "optional": [
+      {
+        "name": "rabbitmq_storage_size",
+        "type": "string",
+        "description": "Size of persistent volume for RabbitMQ",
+        "default": "10Gi",
+        "source": "user"
+      },
+      {
+        "name": "cwc_replicas",
+        "type": "number",
+        "description": "Number of CWC replicas",
+        "default": 1,
+        "source": "user"
+      },
+      {
+        "name": "common_labels",
+        "type": "map(string)",
+        "description": "Common labels to apply to all resources",
+        "default": {},
+        "source": "user"
+      }
+    ]
+  },
+  "outputs": {
+    "key_outputs": [
+      {
+        "name": "cwc_ready",
+        "type": "boolean",
+        "description": "Flag indicating CWC is deployed and ready",
+        "used_by": [],
+        "sensitive": false
+      },
+      {
+        "name": "rabbitmq_ready",
+        "type": "boolean",
+        "description": "Flag indicating RabbitMQ is ready",
+        "used_by": ["bnk/f5-controller"],
+        "sensitive": false
+      },
+      {
+        "name": "cwc_url",
+        "type": "string",
+        "description": "URL for accessing CWC web console",
+        "used_by": [],
+        "sensitive": false
+      },
+      {
+        "name": "rabbitmq_service_host",
+        "type": "string",
+        "description": "RabbitMQ service hostname",
+        "used_by": ["bnk/f5-controller"],
+        "sensitive": false
+      }
+    ]
+  },
+  "providers": {
+    "required": ["kubernetes", "helm"],
+    "optional": []
+  },
+  "backend": {
+    "recommendations": {
+      "aws": "s3",
+      "azure": "azurerm",
+      "gcp": "gcs",
+      "on-prem": "local"
+    }
+  },
+  "deployment": {
+    "order": 47,
+    "estimated_time": "8 minutes",
+    "requires_user_input": true,
+    "sensitive_inputs": []
+  }
+}

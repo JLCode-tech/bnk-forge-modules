@@ -1,0 +1,160 @@
+{
+  "module": {
+    "name": "DSSM (Distributed State Sharing Manager)",
+    "path": "bnk/dssm",
+    "version": "1.0.0",
+    "layer": "bnk-platform",
+    "category": "platform",
+    "description": "Deploys DSSM (Distributed State Sharing Manager) with Redis Sentinel for high-availability state management. Required for BNK legacy SPK controller mode to share state across TMM instances.",
+    "cloud_specific": false,
+    "supported_platforms": ["any"]
+  },
+  "dependencies": {
+    "required": [
+      {
+        "module": "bnk/far-setup",
+        "reason": "Provides registry authentication and DSSM version"
+      },
+      {
+        "module": "infra/aws/storage",
+        "reason": "Provides persistent storage class for Redis data",
+        "cloud_specific": true
+      }
+    ],
+    "optional": []
+  },
+  "inputs": {
+    "required": [
+      {
+        "name": "cluster_name",
+        "type": "string",
+        "description": "Name of the Kubernetes cluster (used for resource identification)",
+        "source": "user",
+        "example": "my-cluster"
+      },
+      {
+        "name": "namespace",
+        "type": "string",
+        "description": "Namespace for DSSM deployment",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "spk_namespace",
+        "example": "f5-spk"
+      },
+      {
+        "name": "dssm_version",
+        "type": "string",
+        "description": "DSSM Helm chart version",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "dssm_version",
+        "example": "1.2.0"
+      },
+      {
+        "name": "far_secret_name",
+        "type": "string",
+        "description": "Name of the FAR registry secret",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "far_secret_name",
+        "example": "far-secret"
+      },
+      {
+        "name": "storage_class",
+        "type": "string",
+        "description": "Storage class for Redis persistent volumes",
+        "source": "module",
+        "from_module": "infra/aws/storage",
+        "from_output": "default_storage_class_name",
+        "example": "gp3"
+      }
+    ],
+    "optional": [
+      {
+        "name": "redis_replicas",
+        "type": "number",
+        "description": "Number of Redis replicas for high availability",
+        "default": 3,
+        "source": "user"
+      },
+      {
+        "name": "sentinel_replicas",
+        "type": "number",
+        "description": "Number of Redis Sentinel replicas",
+        "default": 3,
+        "source": "user"
+      },
+      {
+        "name": "storage_size",
+        "type": "string",
+        "description": "Size of persistent volume for Redis data",
+        "default": "10Gi",
+        "source": "user"
+      },
+      {
+        "name": "redis_memory_limit",
+        "type": "string",
+        "description": "Memory limit for Redis pods",
+        "default": "2Gi",
+        "source": "user"
+      },
+      {
+        "name": "common_labels",
+        "type": "map(string)",
+        "description": "Common labels to apply to all resources",
+        "default": {},
+        "source": "user"
+      }
+    ]
+  },
+  "outputs": {
+    "key_outputs": [
+      {
+        "name": "dssm_ready",
+        "type": "boolean",
+        "description": "Flag indicating DSSM is deployed and ready",
+        "used_by": ["bnk/f5-controller"],
+        "sensitive": false
+      },
+      {
+        "name": "sentinel_service_host",
+        "type": "string",
+        "description": "Redis Sentinel service hostname",
+        "used_by": ["bnk/f5-controller"],
+        "sensitive": false
+      },
+      {
+        "name": "sentinel_service_port",
+        "type": "number",
+        "description": "Redis Sentinel service port",
+        "used_by": ["bnk/f5-controller"],
+        "sensitive": false
+      },
+      {
+        "name": "redis_master_name",
+        "type": "string",
+        "description": "Redis master instance name",
+        "used_by": ["bnk/f5-controller"],
+        "sensitive": false
+      }
+    ]
+  },
+  "providers": {
+    "required": ["kubernetes", "helm"],
+    "optional": []
+  },
+  "backend": {
+    "recommendations": {
+      "aws": "s3",
+      "azure": "azurerm",
+      "gcp": "gcs",
+      "on-prem": "local"
+    }
+  },
+  "deployment": {
+    "order": 48,
+    "estimated_time": "5 minutes",
+    "requires_user_input": false,
+    "sensitive_inputs": []
+  }
+}

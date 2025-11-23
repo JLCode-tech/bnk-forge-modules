@@ -1,0 +1,150 @@
+{
+  "module": {
+    "name": "BNK Security Policy",
+    "path": "bnk/bnk-secpolicy",
+    "version": "1.0.0",
+    "layer": "bnk-policy",
+    "category": "security",
+    "description": "Creates BNK SecurityPolicy custom resources for advanced security features (WAF, DDoS protection, bot defense, API security) that attach to Gateway API resources.",
+    "cloud_specific": false,
+    "supported_platforms": ["any"]
+  },
+  "dependencies": {
+    "required": [
+      {
+        "module": "bnk/flo",
+        "reason": "FLO provides BNK SecurityPolicy CRD and controller"
+      }
+    ],
+    "optional": [
+      {
+        "module": "bnk/gateway",
+        "reason": "SecurityPolicy typically attaches to Gateway",
+        "provides": "Gateway attachment point for security policies"
+      }
+    ]
+  },
+  "inputs": {
+    "required": [
+      {
+        "name": "cluster_name",
+        "type": "string",
+        "description": "Name of the Kubernetes cluster (used for resource identification)",
+        "source": "user",
+        "example": "my-cluster"
+      },
+      {
+        "name": "policy_name",
+        "type": "string",
+        "description": "Name for the SecurityPolicy resource",
+        "source": "user",
+        "example": "my-security-policy"
+      },
+      {
+        "name": "policy_namespace",
+        "type": "string",
+        "description": "Namespace for SecurityPolicy deployment",
+        "source": "user",
+        "example": "default"
+      },
+      {
+        "name": "flo_ready",
+        "type": "boolean",
+        "description": "Dependency flag ensuring FLO is ready",
+        "source": "module",
+        "from_module": "bnk/flo",
+        "from_output": "flo_ready",
+        "example": true
+      },
+      {
+        "name": "security_settings",
+        "type": "object",
+        "description": "Security policy settings (WAF rules, rate limiting, bot defense)",
+        "source": "user",
+        "example": {
+          "waf": {
+            "enabled": true,
+            "mode": "blocking"
+          },
+          "rate_limiting": {
+            "enabled": true,
+            "requests_per_second": 100
+          }
+        }
+      }
+    ],
+    "optional": [
+      {
+        "name": "target_ref",
+        "type": "object",
+        "description": "Target reference (Gateway, Route, or Service)",
+        "default": null,
+        "source": "user"
+      },
+      {
+        "name": "enable_logging",
+        "type": "boolean",
+        "description": "Enable security event logging",
+        "default": true,
+        "source": "user"
+      },
+      {
+        "name": "log_level",
+        "type": "string",
+        "description": "Log level for security events (debug, info, warn, error)",
+        "default": "info",
+        "source": "user"
+      },
+      {
+        "name": "common_labels",
+        "type": "map(string)",
+        "description": "Common labels to apply to SecurityPolicy",
+        "default": {},
+        "source": "user"
+      }
+    ]
+  },
+  "outputs": {
+    "key_outputs": [
+      {
+        "name": "policy_ready",
+        "type": "boolean",
+        "description": "Flag indicating SecurityPolicy is accepted and active",
+        "used_by": [],
+        "sensitive": false
+      },
+      {
+        "name": "policy_name",
+        "type": "string",
+        "description": "Name of the created SecurityPolicy",
+        "used_by": [],
+        "sensitive": false
+      },
+      {
+        "name": "policy_namespace",
+        "type": "string",
+        "description": "Namespace where SecurityPolicy is deployed",
+        "used_by": [],
+        "sensitive": false
+      }
+    ]
+  },
+  "providers": {
+    "required": ["kubernetes"],
+    "optional": []
+  },
+  "backend": {
+    "recommendations": {
+      "aws": "s3",
+      "azure": "azurerm",
+      "gcp": "gcs",
+      "on-prem": "local"
+    }
+  },
+  "deployment": {
+    "order": 90,
+    "estimated_time": "2 minutes",
+    "requires_user_input": true,
+    "sensitive_inputs": []
+  }
+}

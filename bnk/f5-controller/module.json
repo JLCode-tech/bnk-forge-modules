@@ -1,0 +1,205 @@
+{
+  "module": {
+    "name": "F5 SPK Controller (Legacy)",
+    "path": "bnk/f5-controller",
+    "version": "1.0.0",
+    "layer": "bnk-platform",
+    "category": "platform",
+    "description": "Deploys F5 SPK Controller in legacy mode with TMM data plane. Required for non-Gateway API deployments. For Gateway API, use FLO + bnk-gatewayclass instead.",
+    "cloud_specific": false,
+    "supported_platforms": ["any"]
+  },
+  "dependencies": {
+    "required": [
+      {
+        "module": "bnk/far-setup",
+        "reason": "Provides registry authentication and controller version"
+      },
+      {
+        "module": "bnk/dssm",
+        "reason": "Provides distributed state sharing for TMM instances"
+      }
+    ],
+    "optional": [
+      {
+        "module": "k8s/network-setup",
+        "reason": "Provides network attachment definitions for multi-NIC",
+        "provides": "Multiple network interfaces for TMM"
+      },
+      {
+        "module": "bnk/fluentd",
+        "reason": "Provides log aggregation",
+        "provides": "Centralized logging"
+      },
+      {
+        "module": "infra/aws/high-performance-nodes",
+        "reason": "Provides high-performance nodes for TMM workloads",
+        "provides": "Optimized compute for traffic management",
+        "cloud_specific": true
+      }
+    ]
+  },
+  "inputs": {
+    "required": [
+      {
+        "name": "cluster_name",
+        "type": "string",
+        "description": "Name of the Kubernetes cluster (used for resource identification)",
+        "source": "user",
+        "example": "my-cluster"
+      },
+      {
+        "name": "f5_spk_namespace",
+        "type": "string",
+        "description": "Namespace for F5 SPK controller",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "spk_namespace",
+        "example": "f5-spk"
+      },
+      {
+        "name": "rabbitmq_namespace",
+        "type": "string",
+        "description": "Namespace for RabbitMQ messaging",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "spk_namespace",
+        "example": "f5-spk"
+      },
+      {
+        "name": "f5_controller_chart_version",
+        "type": "string",
+        "description": "F5 controller Helm chart version",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "controller_version",
+        "example": "2.1.0"
+      },
+      {
+        "name": "far_secret_name",
+        "type": "string",
+        "description": "Name of the FAR registry secret",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "far_secret_name",
+        "example": "far-secret"
+      },
+      {
+        "name": "dssm_sentinel_host",
+        "type": "string",
+        "description": "DSSM Redis Sentinel hostname",
+        "source": "module",
+        "from_module": "bnk/dssm",
+        "from_output": "sentinel_service_host",
+        "example": "dssm-sentinel"
+      },
+      {
+        "name": "dssm_sentinel_port",
+        "type": "number",
+        "description": "DSSM Redis Sentinel port",
+        "source": "module",
+        "from_module": "bnk/dssm",
+        "from_output": "sentinel_service_port",
+        "example": 26379
+      },
+      {
+        "name": "f5_vlan_ips",
+        "type": "list(string)",
+        "description": "IP addresses for F5 VLAN interfaces",
+        "source": "user",
+        "example": ["10.1.10.100", "10.1.20.100"]
+      }
+    ],
+    "optional": [
+      {
+        "name": "external_nad_name",
+        "type": "string",
+        "description": "External network attachment definition name",
+        "default": "",
+        "source": "module",
+        "from_module": "k8s/network-setup",
+        "from_output": "external_nad_name"
+      },
+      {
+        "name": "internal_nad_name",
+        "type": "string",
+        "description": "Internal network attachment definition name",
+        "default": "",
+        "source": "module",
+        "from_module": "k8s/network-setup",
+        "from_output": "internal_nad_name"
+      },
+      {
+        "name": "tmm_replicas",
+        "type": "number",
+        "description": "Number of TMM replicas",
+        "default": 2,
+        "source": "user"
+      },
+      {
+        "name": "node_selector_labels",
+        "type": "map(string)",
+        "description": "Node selector labels for TMM placement",
+        "default": {},
+        "source": "user"
+      },
+      {
+        "name": "enable_prometheus_metrics",
+        "type": "boolean",
+        "description": "Enable Prometheus metrics",
+        "default": true,
+        "source": "user"
+      },
+      {
+        "name": "common_labels",
+        "type": "map(string)",
+        "description": "Common labels to apply to all resources",
+        "default": {},
+        "source": "user"
+      }
+    ]
+  },
+  "outputs": {
+    "key_outputs": [
+      {
+        "name": "controller_ready",
+        "type": "boolean",
+        "description": "Flag indicating F5 controller is deployed and ready",
+        "used_by": [],
+        "sensitive": false
+      },
+      {
+        "name": "tmm_ready",
+        "type": "boolean",
+        "description": "Flag indicating TMM pods are ready",
+        "used_by": [],
+        "sensitive": false
+      },
+      {
+        "name": "controller_service_ip",
+        "type": "string",
+        "description": "Controller service IP address",
+        "used_by": [],
+        "sensitive": false
+      }
+    ]
+  },
+  "providers": {
+    "required": ["kubernetes", "helm"],
+    "optional": []
+  },
+  "backend": {
+    "recommendations": {
+      "aws": "s3",
+      "azure": "azurerm",
+      "gcp": "gcs",
+      "on-prem": "local"
+    }
+  },
+  "deployment": {
+    "order": 55,
+    "estimated_time": "8 minutes",
+    "requires_user_input": true,
+    "sensitive_inputs": []
+  }
+}

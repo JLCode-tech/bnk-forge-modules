@@ -1,0 +1,111 @@
+{
+  "module": {
+    "name": "AWS EKS Storage Classes",
+    "path": "infra/aws/storage",
+    "version": "1.0.0",
+    "layer": "infrastructure",
+    "category": "storage",
+    "description": "Creates Kubernetes storage classes for AWS EBS volumes with different performance tiers (gp3, io2, etc.).",
+    "cloud_specific": true,
+    "supported_platforms": ["aws"]
+  },
+  "dependencies": {
+    "required": [
+      {
+        "module": "infra/aws/eks",
+        "reason": "Requires EKS cluster for storage class deployment"
+      }
+    ],
+    "optional": []
+  },
+  "inputs": {
+    "required": [
+      {
+        "name": "cluster_name",
+        "type": "string",
+        "description": "Name of the Kubernetes cluster (used for resource identification)",
+        "source": "module",
+        "from_module": "infra/aws/eks",
+        "from_output": "cluster_name",
+        "example": "my-eks-cluster"
+      }
+    ],
+    "optional": [
+      {
+        "name": "enable_gp3",
+        "type": "boolean",
+        "description": "Create gp3 storage class (general purpose SSD)",
+        "default": true,
+        "source": "user"
+      },
+      {
+        "name": "enable_io2",
+        "type": "boolean",
+        "description": "Create io2 storage class (high-performance IOPS SSD)",
+        "default": false,
+        "source": "user"
+      },
+      {
+        "name": "enable_st1",
+        "type": "boolean",
+        "description": "Create st1 storage class (throughput optimized HDD)",
+        "default": false,
+        "source": "user"
+      },
+      {
+        "name": "set_default_storage_class",
+        "type": "string",
+        "description": "Storage class to set as default (gp3, io2, st1, or none)",
+        "default": "gp3",
+        "source": "user"
+      },
+      {
+        "name": "common_labels",
+        "type": "map(string)",
+        "description": "Common labels to apply to all storage classes",
+        "default": {},
+        "source": "user"
+      }
+    ]
+  },
+  "outputs": {
+    "key_outputs": [
+      {
+        "name": "storage_classes_deployed",
+        "type": "list(string)",
+        "description": "List of deployed storage class names",
+        "used_by": ["bnk/dssm", "bnk/fluentd", "bnk/cwc"],
+        "sensitive": false
+      },
+      {
+        "name": "default_storage_class_name",
+        "type": "string",
+        "description": "Name of the default storage class",
+        "used_by": ["bnk/dssm", "bnk/fluentd", "bnk/cwc"],
+        "sensitive": false
+      },
+      {
+        "name": "storage_class_names",
+        "type": "map(string)",
+        "description": "Map of storage class types to names (gp3, io2, st1)",
+        "used_by": ["bnk/dssm", "bnk/fluentd", "bnk/cwc"],
+        "sensitive": false
+      }
+    ]
+  },
+  "providers": {
+    "required": ["kubernetes"],
+    "optional": []
+  },
+  "backend": {
+    "recommendations": {
+      "aws": "s3"
+    }
+  },
+  "deployment": {
+    "order": 10,
+    "estimated_time": "2 minutes",
+    "requires_user_input": false,
+    "sensitive_inputs": []
+  }
+}

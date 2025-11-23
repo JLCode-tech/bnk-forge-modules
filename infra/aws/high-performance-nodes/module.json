@@ -1,0 +1,209 @@
+{
+  "module": {
+    "name": "AWS EKS High-Performance Node Group",
+    "path": "infra/aws/high-performance-nodes",
+    "version": "1.0.0",
+    "layer": "infrastructure",
+    "category": "compute",
+    "description": "Creates dedicated high-performance EKS node group with optimized instance types (c5n, c6i) for BNK Gateway traffic management workloads.",
+    "cloud_specific": true,
+    "supported_platforms": ["aws"]
+  },
+  "dependencies": {
+    "required": [
+      {
+        "module": "infra/aws/vpc",
+        "reason": "Requires VPC for node placement"
+      },
+      {
+        "module": "infra/aws/security",
+        "reason": "Requires IAM roles and SSH key for node configuration"
+      },
+      {
+        "module": "infra/aws/eks",
+        "reason": "Requires EKS cluster for node group attachment"
+      }
+    ],
+    "optional": []
+  },
+  "inputs": {
+    "required": [
+      {
+        "name": "project_name",
+        "type": "string",
+        "description": "Name of the project (used for node group naming)",
+        "source": "user",
+        "example": "my-bnk-project"
+      },
+      {
+        "name": "environment",
+        "type": "string",
+        "description": "Environment name (dev, staging, prod)",
+        "source": "user",
+        "example": "dev"
+      },
+      {
+        "name": "vpc_id",
+        "type": "string",
+        "description": "ID of the VPC",
+        "source": "module",
+        "from_module": "infra/aws/vpc",
+        "from_output": "vpc_id",
+        "example": "vpc-12345678"
+      },
+      {
+        "name": "cluster_name",
+        "type": "string",
+        "description": "Name of the EKS cluster",
+        "source": "module",
+        "from_module": "infra/aws/eks",
+        "from_output": "cluster_name",
+        "example": "my-eks-cluster"
+      },
+      {
+        "name": "subnet_ids",
+        "type": "list(string)",
+        "description": "Private subnet IDs for node placement",
+        "source": "module",
+        "from_module": "infra/aws/vpc",
+        "from_output": "private_internal_subnet_ids",
+        "example": ["subnet-11111111", "subnet-22222222"]
+      },
+      {
+        "name": "vpc_security_group_id",
+        "type": "string",
+        "description": "Security group ID for cluster communication",
+        "source": "module",
+        "from_module": "infra/aws/security",
+        "from_output": "vpc_security_group_id",
+        "example": "sg-12345678"
+      },
+      {
+        "name": "nodegroup_role_arn",
+        "type": "string",
+        "description": "ARN of the IAM role for node groups",
+        "source": "module",
+        "from_module": "infra/aws/security",
+        "from_output": "nodegroup_role_arn",
+        "example": "arn:aws:iam::123456789012:role/eks-nodegroup-role"
+      },
+      {
+        "name": "key_pair_name",
+        "type": "string",
+        "description": "Name of the SSH key pair for node access",
+        "source": "module",
+        "from_module": "infra/aws/security",
+        "from_output": "infrastructure_key_name",
+        "example": "my-project-key"
+      }
+    ],
+    "optional": [
+      {
+        "name": "instance_types",
+        "type": "list(string)",
+        "description": "EC2 instance types for high-performance nodes",
+        "default": ["c5n.4xlarge"],
+        "source": "user"
+      },
+      {
+        "name": "desired_size",
+        "type": "number",
+        "description": "Desired number of high-performance nodes",
+        "default": 2,
+        "source": "user"
+      },
+      {
+        "name": "min_size",
+        "type": "number",
+        "description": "Minimum number of nodes",
+        "default": 2,
+        "source": "user"
+      },
+      {
+        "name": "max_size",
+        "type": "number",
+        "description": "Maximum number of nodes",
+        "default": 4,
+        "source": "user"
+      },
+      {
+        "name": "enable_multus",
+        "type": "boolean",
+        "description": "Enable Multus CNI for multiple network interfaces",
+        "default": true,
+        "source": "user"
+      },
+      {
+        "name": "node_labels",
+        "type": "map(string)",
+        "description": "Kubernetes labels for node selection",
+        "default": {
+          "workload-type": "high-performance",
+          "bnk-traffic": "enabled"
+        },
+        "source": "user"
+      },
+      {
+        "name": "node_taints",
+        "type": "list(object)",
+        "description": "Kubernetes taints to apply to nodes",
+        "default": [],
+        "source": "user"
+      },
+      {
+        "name": "common_tags",
+        "type": "map(string)",
+        "description": "Common tags to apply to all resources",
+        "default": {},
+        "source": "user"
+      }
+    ]
+  },
+  "outputs": {
+    "key_outputs": [
+      {
+        "name": "nodegroup_name",
+        "type": "string",
+        "description": "Name of the high-performance node group",
+        "used_by": ["bnk/f5-controller"],
+        "sensitive": false
+      },
+      {
+        "name": "nodegroup_status",
+        "type": "string",
+        "description": "Status of the node group deployment",
+        "used_by": [],
+        "sensitive": false
+      },
+      {
+        "name": "nodegroup_id",
+        "type": "string",
+        "description": "ID of the node group",
+        "used_by": [],
+        "sensitive": false
+      },
+      {
+        "name": "node_labels",
+        "type": "map(string)",
+        "description": "Kubernetes labels applied to nodes",
+        "used_by": ["bnk/f5-controller", "bnk/gateway"],
+        "sensitive": false
+      }
+    ]
+  },
+  "providers": {
+    "required": ["aws"],
+    "optional": ["kubernetes"]
+  },
+  "backend": {
+    "recommendations": {
+      "aws": "s3"
+    }
+  },
+  "deployment": {
+    "order": 11,
+    "estimated_time": "10 minutes",
+    "requires_user_input": false,
+    "sensitive_inputs": []
+  }
+}

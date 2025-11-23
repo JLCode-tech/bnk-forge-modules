@@ -1,0 +1,151 @@
+{
+  "module": {
+    "name": "BNK GatewayClass",
+    "path": "bnk/bnk-gatewayclass",
+    "version": "1.0.0",
+    "layer": "bnk-gateway",
+    "category": "gateway",
+    "description": "Creates Kubernetes Gateway API GatewayClass resource for BNK. Defines the controller configuration and TMM resource allocations for Gateway instances.",
+    "cloud_specific": false,
+    "supported_platforms": ["any"]
+  },
+  "dependencies": {
+    "required": [
+      {
+        "module": "bnk/flo",
+        "reason": "FLO provides the Gateway API controller implementation and CRDs"
+      }
+    ],
+    "optional": []
+  },
+  "inputs": {
+    "required": [
+      {
+        "name": "cluster_name",
+        "type": "string",
+        "description": "Name of the Kubernetes cluster (used for resource identification)",
+        "source": "user",
+        "example": "my-cluster"
+      },
+      {
+        "name": "gatewayclass_name",
+        "type": "string",
+        "description": "Name for the GatewayClass resource",
+        "source": "user",
+        "example": "bnk-gatewayclass"
+      },
+      {
+        "name": "flo_namespace",
+        "type": "string",
+        "description": "Namespace where FLO is deployed",
+        "source": "module",
+        "from_module": "bnk/flo",
+        "from_output": "flo_namespace",
+        "example": "f5-spk"
+      },
+      {
+        "name": "flo_ready",
+        "type": "boolean",
+        "description": "Dependency flag ensuring FLO is ready",
+        "source": "module",
+        "from_module": "bnk/flo",
+        "from_output": "flo_ready",
+        "example": true
+      }
+    ],
+    "optional": [
+      {
+        "name": "tmm_cpu_limit",
+        "type": "string",
+        "description": "CPU resource limit for TMM pods",
+        "default": "2",
+        "source": "user"
+      },
+      {
+        "name": "tmm_memory_limit",
+        "type": "string",
+        "description": "Memory resource limit for TMM pods",
+        "default": "4Gi",
+        "source": "user"
+      },
+      {
+        "name": "tmm_cpu_request",
+        "type": "string",
+        "description": "CPU resource request for TMM pods",
+        "default": "1",
+        "source": "user"
+      },
+      {
+        "name": "tmm_memory_request",
+        "type": "string",
+        "description": "Memory resource request for TMM pods",
+        "default": "2Gi",
+        "source": "user"
+      },
+      {
+        "name": "controller_name",
+        "type": "string",
+        "description": "Controller name for GatewayClass",
+        "default": "bnk.f5.com/gateway-controller",
+        "source": "user"
+      },
+      {
+        "name": "description",
+        "type": "string",
+        "description": "Description for the GatewayClass",
+        "default": "BNK Gateway API GatewayClass",
+        "source": "user"
+      },
+      {
+        "name": "common_labels",
+        "type": "map(string)",
+        "description": "Common labels to apply to GatewayClass",
+        "default": {},
+        "source": "user"
+      }
+    ]
+  },
+  "outputs": {
+    "key_outputs": [
+      {
+        "name": "gatewayclass_name",
+        "type": "string",
+        "description": "Name of the created GatewayClass",
+        "used_by": ["bnk/gateway"],
+        "sensitive": false
+      },
+      {
+        "name": "gatewayclass_ready",
+        "type": "boolean",
+        "description": "Flag indicating GatewayClass is accepted and ready",
+        "used_by": ["bnk/gateway"],
+        "sensitive": false
+      },
+      {
+        "name": "controller_name",
+        "type": "string",
+        "description": "Controller managing this GatewayClass",
+        "used_by": [],
+        "sensitive": false
+      }
+    ]
+  },
+  "providers": {
+    "required": ["kubernetes"],
+    "optional": []
+  },
+  "backend": {
+    "recommendations": {
+      "aws": "s3",
+      "azure": "azurerm",
+      "gcp": "gcs",
+      "on-prem": "local"
+    }
+  },
+  "deployment": {
+    "order": 60,
+    "estimated_time": "2 minutes",
+    "requires_user_input": false,
+    "sensitive_inputs": []
+  }
+}

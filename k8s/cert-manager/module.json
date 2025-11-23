@@ -1,0 +1,146 @@
+{
+  "module": {
+    "name": "Cert-Manager",
+    "path": "k8s/cert-manager",
+    "version": "1.0.0",
+    "layer": "kubernetes",
+    "category": "security",
+    "description": "Deploys cert-manager for automatic certificate management and TLS provisioning in Kubernetes. Required for BNK CWC and FLO webhook certificates.",
+    "cloud_specific": false,
+    "supported_platforms": ["any"]
+  },
+  "dependencies": {
+    "required": [
+      {
+        "module": "bnk/far-setup",
+        "reason": "Provides F5 registry authentication and component version information"
+      }
+    ],
+    "optional": []
+  },
+  "inputs": {
+    "required": [
+      {
+        "name": "cluster_name",
+        "type": "string",
+        "description": "Name of the Kubernetes cluster (used for resource identification)",
+        "source": "user",
+        "example": "my-cluster"
+      },
+      {
+        "name": "namespace",
+        "type": "string",
+        "description": "Namespace for cert-manager deployment",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "spk_namespace",
+        "example": "f5-spk"
+      },
+      {
+        "name": "far_secret_name",
+        "type": "string",
+        "description": "Name of the FAR registry secret for pulling images",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "far_secret_name",
+        "example": "far-secret"
+      },
+      {
+        "name": "cert_manager_version",
+        "type": "string",
+        "description": "Version of cert-manager to deploy",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "cert_manager_version",
+        "example": "v1.13.2"
+      }
+    ],
+    "optional": [
+      {
+        "name": "enable_webhook",
+        "type": "boolean",
+        "description": "Enable cert-manager webhook for validation",
+        "default": true,
+        "source": "user"
+      },
+      {
+        "name": "install_crds",
+        "type": "boolean",
+        "description": "Install cert-manager CRDs",
+        "default": true,
+        "source": "user"
+      },
+      {
+        "name": "resource_limits_cpu",
+        "type": "string",
+        "description": "CPU resource limits for cert-manager",
+        "default": "100m",
+        "source": "user"
+      },
+      {
+        "name": "resource_limits_memory",
+        "type": "string",
+        "description": "Memory resource limits for cert-manager",
+        "default": "128Mi",
+        "source": "user"
+      },
+      {
+        "name": "common_labels",
+        "type": "map(string)",
+        "description": "Common labels to apply to all resources",
+        "default": {},
+        "source": "user"
+      }
+    ]
+  },
+  "outputs": {
+    "key_outputs": [
+      {
+        "name": "cert_manager_ready",
+        "type": "boolean",
+        "description": "Flag indicating cert-manager is deployed and ready",
+        "used_by": ["bnk/cwc", "bnk/flo"],
+        "sensitive": false
+      },
+      {
+        "name": "release_status",
+        "type": "string",
+        "description": "Status of the Helm release deployment",
+        "used_by": [],
+        "sensitive": false
+      },
+      {
+        "name": "namespace",
+        "type": "string",
+        "description": "Namespace where cert-manager is deployed",
+        "used_by": [],
+        "sensitive": false
+      },
+      {
+        "name": "webhook_service_name",
+        "type": "string",
+        "description": "Name of the cert-manager webhook service",
+        "used_by": [],
+        "sensitive": false
+      }
+    ]
+  },
+  "providers": {
+    "required": ["kubernetes", "helm"],
+    "optional": []
+  },
+  "backend": {
+    "recommendations": {
+      "aws": "s3",
+      "azure": "azurerm",
+      "gcp": "gcs",
+      "on-prem": "local"
+    }
+  },
+  "deployment": {
+    "order": 45,
+    "estimated_time": "5 minutes",
+    "requires_user_input": false,
+    "sensitive_inputs": []
+  }
+}

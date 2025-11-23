@@ -1,0 +1,191 @@
+{
+  "module": {
+    "name": "F5 Artifact Registry (FAR) Setup",
+    "path": "bnk/far-setup",
+    "version": "1.0.0",
+    "layer": "bnk-foundation",
+    "category": "foundation",
+    "description": "Sets up F5 Artifact Registry authentication and configures component versions for BNK deployment. Creates namespaces, image pull secrets, and version configuration. Required for all BNK modules.",
+    "cloud_specific": false,
+    "supported_platforms": ["any"]
+  },
+  "dependencies": {
+    "required": [],
+    "optional": []
+  },
+  "inputs": {
+    "required": [
+      {
+        "name": "cluster_name",
+        "type": "string",
+        "description": "Name of the Kubernetes cluster (used for resource naming and identification)",
+        "source": "user",
+        "example": "my-cluster"
+      },
+      {
+        "name": "spk_manifest_version",
+        "type": "string",
+        "description": "BNK SPK manifest version (format: SPK-FLO-CRD)",
+        "source": "user",
+        "example": "2.1.0-3.1736.1-0.1.27"
+      },
+      {
+        "name": "service_account_key_file",
+        "type": "string",
+        "description": "Path to F5 service account JSON key file for registry authentication",
+        "source": "user",
+        "example": "~/far-credentials.json",
+        "sensitive": true
+      }
+    ],
+    "optional": [
+      {
+        "name": "spk_namespace",
+        "type": "string",
+        "description": "Namespace for BNK SPK components",
+        "default": "f5-spk",
+        "source": "user"
+      },
+      {
+        "name": "utils_namespace",
+        "type": "string",
+        "description": "Namespace for utility components",
+        "default": "f5-utils",
+        "source": "user"
+      },
+      {
+        "name": "far_secret_name",
+        "type": "string",
+        "description": "Name for the FAR image pull secret",
+        "default": "far-secret",
+        "source": "user"
+      },
+      {
+        "name": "create_namespaces",
+        "type": "boolean",
+        "description": "Create SPK and utils namespaces automatically",
+        "default": true,
+        "source": "user"
+      },
+      {
+        "name": "common_labels",
+        "type": "map(string)",
+        "description": "Common labels to apply to all resources",
+        "default": {},
+        "source": "user"
+      }
+    ]
+  },
+  "outputs": {
+    "key_outputs": [
+      {
+        "name": "spk_namespace",
+        "type": "string",
+        "description": "Namespace for BNK SPK components",
+        "used_by": [
+          "k8s/cert-manager",
+          "bnk/flo",
+          "bnk/cwc",
+          "bnk/dssm",
+          "bnk/f5-controller",
+          "bnk/fluentd",
+          "bnk/crds/common",
+          "bnk/crds/service-proxy",
+          "bnk/crds/deprecated"
+        ],
+        "sensitive": false
+      },
+      {
+        "name": "utils_namespace",
+        "type": "string",
+        "description": "Namespace for utility components",
+        "used_by": [],
+        "sensitive": false
+      },
+      {
+        "name": "far_secret_name",
+        "type": "string",
+        "description": "Name of the FAR registry secret",
+        "used_by": [
+          "k8s/cert-manager",
+          "bnk/flo",
+          "bnk/cwc",
+          "bnk/dssm",
+          "bnk/f5-controller",
+          "bnk/fluentd",
+          "bnk/crds/common",
+          "bnk/crds/service-proxy",
+          "bnk/crds/deprecated"
+        ],
+        "sensitive": false
+      },
+      {
+        "name": "cert_manager_version",
+        "type": "string",
+        "description": "Version of cert-manager to use",
+        "used_by": ["k8s/cert-manager"],
+        "sensitive": false
+      },
+      {
+        "name": "cwc_version",
+        "type": "string",
+        "description": "Version of CWC (Central Web Console) to use",
+        "used_by": ["bnk/cwc"],
+        "sensitive": false
+      },
+      {
+        "name": "controller_version",
+        "type": "string",
+        "description": "Version of F5 SPK controller to use",
+        "used_by": ["bnk/f5-controller"],
+        "sensitive": false
+      },
+      {
+        "name": "dssm_version",
+        "type": "string",
+        "description": "Version of DSSM (Distributed State Sharing Manager) to use",
+        "used_by": ["bnk/dssm"],
+        "sensitive": false
+      },
+      {
+        "name": "fluentd_version",
+        "type": "string",
+        "description": "Version of Fluentd to use",
+        "used_by": ["bnk/fluentd"],
+        "sensitive": false
+      },
+      {
+        "name": "crds_versions",
+        "type": "map(string)",
+        "description": "Map of CRD versions (common, service-proxy, deprecated)",
+        "used_by": ["bnk/crds/common", "bnk/crds/service-proxy", "bnk/crds/deprecated"],
+        "sensitive": false
+      },
+      {
+        "name": "setup_complete",
+        "type": "boolean",
+        "description": "Flag indicating FAR setup is complete",
+        "used_by": ["ALL BNK modules"],
+        "sensitive": false
+      }
+    ]
+  },
+  "providers": {
+    "required": ["kubernetes"],
+    "optional": []
+  },
+  "backend": {
+    "recommendations": {
+      "aws": "s3",
+      "azure": "azurerm",
+      "gcp": "gcs",
+      "on-prem": "local"
+    }
+  },
+  "deployment": {
+    "order": 40,
+    "estimated_time": "2 minutes",
+    "requires_user_input": true,
+    "sensitive_inputs": ["service_account_key_file"]
+  }
+}
