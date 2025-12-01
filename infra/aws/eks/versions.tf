@@ -1,11 +1,9 @@
-# infrastructure-modules/foundation/eks/versions.tf
+# EKS module provider requirements
+# Backend configuration is managed by Terragrunt root.hcl
 
 terraform {
   required_version = ">= 1.3"
-  
-  # Empty backend block - required for Terragrunt remote_state
-  backend "s3" {}
-  
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
