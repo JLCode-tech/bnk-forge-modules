@@ -127,24 +127,23 @@ data "external" "component_versions" {
 # VALIDATION
 # =============================================================================
 
-# Validate that all required component versions were parsed
+# Validate that required component versions were parsed
+# Note: CWC, CRDs, F5Ingress, DSSM, Fluentd are now managed by FLO (F5 Lifecycle Operator)
+# FAR-setup only needs to validate prerequisites: cert_manager and flo
 resource "local_file" "version_validation" {
   filename = "${path.module}/work/versions-validated.json"
   content = jsonencode({
     validation_timestamp = timestamp()
     required_components = [
       "cert_manager",
-      "cwc", 
-      "spk_crds_common",
-      "spk_crds_service_proxy",
-      "spk_crds_deprecated",
-      "f5ingress"
+      "flo"
     ]
     parsed_versions = data.external.component_versions.result
     validation_passed = alltrue([
-      for component in ["cert_manager", "cwc", "spk_crds_common", "spk_crds_service_proxy", "spk_crds_deprecated", "f5ingress"] :
+      for component in ["cert_manager", "flo"] :
       lookup(data.external.component_versions.result, component, "") != ""
     ])
+    note = "FLO manages: CWC, DSSM, Fluentd, F5Ingress, CRDs (common, service-proxy, deprecated)"
   })
 
   depends_on = [data.external.component_versions]
