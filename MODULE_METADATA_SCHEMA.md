@@ -10,7 +10,7 @@ Each module should have a `module.json` file that describes its dependencies, in
     "name": "string",
     "path": "string",
     "version": "string",
-    "layer": "infrastructure|kubernetes|bnk-foundation|bnk-platform|bnk-gateway|bnk-policy",
+    "layer": "infrastructure|kubernetes|bnk-foundation|bnk-platform|bnk-gateway|bnk-application|bnk-policy",
     "category": "network|security|compute|storage|platform|application",
     "description": "string",
     "cloud_specific": boolean,
@@ -240,6 +240,8 @@ Each module should have a `module.json` file that describes its dependencies, in
 
 ## Example: bnk/flo
 
+FLO is the **central orchestrator** for BIG-IP Next for Kubernetes. When you apply a `BnkGatewayClass` CR, FLO automatically deploys all required components (CWC, DSSM, TMM, F5 Ingress, Fluentd, CRDs, etc.).
+
 ```json
 {
   "module": {
@@ -248,7 +250,7 @@ Each module should have a `module.json` file that describes its dependencies, in
     "version": "1.0.0",
     "layer": "bnk-platform",
     "category": "platform",
-    "description": "Deploys F5 Lifecycle Operator to manage BNK components and CRDs",
+    "description": "Deploys F5 Lifecycle Operator - the central orchestrator that manages all BNK components",
     "cloud_specific": false,
     "supported_platforms": ["any"]
   },
@@ -256,14 +258,18 @@ Each module should have a `module.json` file that describes its dependencies, in
     "required": [
       {
         "module": "bnk/far-setup",
-        "reason": "Provides F5 registry authentication and component versions"
+        "reason": "Provides F5 registry authentication for pulling BNK images"
+      },
+      {
+        "module": "k8s/cert-manager",
+        "reason": "Required for webhook certificates and CRD conversion"
       }
     ],
     "optional": [
       {
-        "module": "k8s/cert-manager",
-        "reason": "Provides certificate management for FLO webhooks",
-        "provides": "Automated certificate management for CRD conversion webhooks"
+        "module": "k8s/network-setup",
+        "reason": "Provides Multus network attachments for TMM pods",
+        "provides": "Multi-homing network support for external/internal traffic separation"
       }
     ]
   },
@@ -304,6 +310,22 @@ Each module should have a `module.json` file that describes its dependencies, in
         "example": "far-secret"
       },
       {
+        "name": "far_setup_complete",
+        "type": "boolean",
+        "description": "Dependency flag for FAR setup",
+        "source": "module",
+        "from_module": "bnk/far-setup",
+        "from_output": "setup_complete"
+      },
+      {
+        "name": "cert_manager_ready",
+        "type": "boolean",
+        "description": "Dependency flag for cert-manager",
+        "source": "module",
+        "from_module": "k8s/cert-manager",
+        "from_output": "cert_manager_ready"
+      },
+      {
         "name": "license_mode",
         "type": "string",
         "description": "FLO licensing mode (connected|disconnected)",
@@ -320,13 +342,11 @@ Each module should have a `module.json` file that describes its dependencies, in
         "source": "user"
       },
       {
-        "name": "cert_manager_ready",
-        "type": "boolean",
-        "description": "Dependency flag for cert-manager",
-        "default": true,
-        "source": "module",
-        "from_module": "k8s/cert-manager",
-        "from_output": "cert_manager_ready"
+        "name": "jwt_token",
+        "type": "string",
+        "description": "JWT token for connected licensing mode",
+        "source": "user",
+        "sensitive": true
       }
     ]
   },
@@ -355,10 +375,27 @@ Each module should have a `module.json` file that describes its dependencies, in
       {
         "name": "crds_installed",
         "type": "boolean",
-        "description": "Flag indicating CRDs are installed by FLO",
+        "description": "Flag indicating CRDs are installed by FLO (FLO manages all CRD installation)",
         "used_by": ["bnk/bnk-gatewayclass", "bnk/gateway", "bnk/routes"],
         "sensitive": false
       }
+    ]
+  },
+  "flo_auto_deploys": {
+    "note": "When BnkGatewayClass CR is applied, FLO automatically deploys these components",
+    "components": [
+      "CWC (Cluster Wide Controller)",
+      "DSSM (Distributed Session State Manager)",
+      "TMM (Traffic Management Microkernel)",
+      "F5 Ingress",
+      "Fluentd (logging)",
+      "All CRDs (common, service-proxy, deprecated)",
+      "Observer",
+      "IPAM Controller",
+      "RabbitMQ",
+      "OTEL Collector",
+      "CRD Installer",
+      "Node Labeler"
     ]
   },
   "providers": {
@@ -377,10 +414,21 @@ Each module should have a `module.json` file that describes its dependencies, in
     "order": 50,
     "estimated_time": "3 minutes",
     "requires_user_input": true,
-    "sensitive_inputs": ["license_jwt_token"]
+    "sensitive_inputs": ["jwt_token"]
   }
 }
 ```
+
+## Key Architecture Note
+
+As of BIG-IP Next for Kubernetes v2.1.0, the following modules are **archived** because FLO manages them automatically:
+- `bnk/cwc` - FLO auto-deploys
+- `bnk/dssm` - FLO auto-deploys
+- `bnk/fluentd` - FLO auto-deploys
+- `bnk/f5-controller` - FLO auto-deploys (as F5 Ingress)
+- `bnk/crds/*` - FLO manages all CRD installation
+
+See `archived/README.md` for details.
 
 ## Input Source Types
 
