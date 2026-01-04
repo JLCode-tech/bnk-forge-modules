@@ -155,7 +155,6 @@ resource "aws_instance" "jumphost" {
     project_name        = var.project_name
     region             = var.aws_region
     sso_profile        = var.aws_profile
-    private_key_pem    = tls_private_key.infrastructure_key.private_key_pem
     kubectl_version    = var.kubectl_version
     kubectl_release_date = var.kubectl_release_date
   }))
@@ -244,7 +243,6 @@ resource "aws_instance" "jumphost_backup" {
     project_name        = var.project_name
     region             = var.aws_region
     sso_profile        = var.aws_profile
-    private_key_pem    = tls_private_key.infrastructure_key.private_key_pem
     kubectl_version    = var.kubectl_version
     kubectl_release_date = var.kubectl_release_date
   }))

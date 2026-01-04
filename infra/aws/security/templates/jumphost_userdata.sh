@@ -97,31 +97,21 @@ mkdir -p /home/ec2-user/.ssh
 chown ec2-user:ec2-user /home/ec2-user/.ssh
 chmod 700 /home/ec2-user/.ssh
 
-# Deploy private key to jumphost for EKS node access
-echo "Setting up SSH key for EKS node access via jumphost..."
-cat > /home/ec2-user/.ssh/${project_name}-infrastructure-kp.pem << 'EOF'
-${private_key_pem}
-EOF
-chmod 400 /home/ec2-user/.ssh/${project_name}-infrastructure-kp.pem
-chown ec2-user:ec2-user /home/ec2-user/.ssh/${project_name}-infrastructure-kp.pem
-
 # SSH config for EKS node access (private IPs only)
+# Note: Using SSH Agent Forwarding is recommended instead of storing private keys
 cat > /home/ec2-user/.ssh/config << 'EOF'
 Host eks-node-*
     User ec2-user
-    IdentityFile ~/.ssh/${project_name}-infrastructure-kp.pem
     StrictHostKeyChecking no
     UserKnownHostsFile /dev/null
 
 Host 10.*
     User ec2-user
-    IdentityFile ~/.ssh/${project_name}-infrastructure-kp.pem
     StrictHostKeyChecking no
     UserKnownHostsFile /dev/null
 
 Host 172.*
     User ec2-user
-    IdentityFile ~/.ssh/${project_name}-infrastructure-kp.pem
     StrictHostKeyChecking no
     UserKnownHostsFile /dev/null
 EOF
@@ -159,7 +149,7 @@ alias kdp='kubectl describe pod'
 alias kdn='kubectl describe node'
 
 # SSH aliases for EKS nodes
-alias ssh-eks='ssh -i ~/.ssh/${project_name}-infrastructure-kp.pem ec2-user@'
+alias ssh-eks='ssh ec2-user@'
 
 # Useful functions
 kexec() {
@@ -192,6 +182,7 @@ kubectl get nodes
 kubectl get pods --all-namespaces
 
 # Access EKS nodes via SSH (private IPs only)
+# USE SSH AGENT FORWARDING: ssh -A -i <key> ec2-user@<jumphost-ip>
 # First get node IPs: kubectl get nodes -o wide
 ssh eks-node-10.0.1.100  # Example IP
 # or use: ssh-eks 10.0.1.100
