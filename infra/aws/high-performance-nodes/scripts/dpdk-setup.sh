@@ -49,29 +49,32 @@ fi
 log "Cloning Amazon drivers repository"
 cd /opt
 git clone https://github.com/amzn/amzn-drivers.git
-cd /
 
-# Download VFIO patches
+# Run VFIO patch script from cloned repo (avoids redundant downloads)
 log "Setting up VFIO patches"
-wget https://raw.githubusercontent.com/amzn/amzn-drivers/master/userspace/dpdk/enav2-vfio-patch/get-vfio-with-wc.sh -O /tmp/get-vfio-with-wc.sh
-chmod +x /tmp/get-vfio-with-wc.sh
-
-mkdir -p /tmp/patches && cd /tmp/patches
-wget https://raw.githubusercontent.com/amzn/amzn-drivers/master/userspace/dpdk/enav2-vfio-patch/patches/linux-4.10-vfio-wc.patch
-wget https://raw.githubusercontent.com/amzn/amzn-drivers/master/userspace/dpdk/enav2-vfio-patch/patches/linux-5.8-vfio-wc.patch
-wget https://raw.githubusercontent.com/amzn/amzn-drivers/master/userspace/dpdk/enav2-vfio-patch/patches/linux-5.15-vfio-wc.patch
-
-cd /tmp && ./get-vfio-with-wc.sh
+cd /opt/amzn-drivers/userspace/dpdk/enav2-vfio-patch/
+chmod +x get-vfio-with-wc.sh
+./get-vfio-with-wc.sh
+cd /
 
 # Create DPDK directory and download scripts from S3
 log "Setting up DPDK directory and downloading scripts from S3"
 mkdir -p /opt/dpdk/
 
-# Download DPDK scripts from S3
-aws s3 cp s3://$S3_BUCKET/dpdk-devbind.py /opt/dpdk/dpdk-devbind.py --region $REGION
-aws s3 cp s3://$S3_BUCKET/sriov-init.sh /opt/dpdk/sriov-init.sh --region $REGION
-aws s3 cp s3://$S3_BUCKET/config-sriov.sh /opt/dpdk/config-sriov.sh --region $REGION
-aws s3 cp s3://$S3_BUCKET/dpdk-resource-builder.py /opt/dpdk/dpdk-resource-builder.py --region $REGION
+# Download DPDK scripts from S3 (in parallel)
+pids=""
+aws s3 cp s3://$S3_BUCKET/dpdk-devbind.py /opt/dpdk/dpdk-devbind.py --region $REGION &
+pids="$pids $!"
+aws s3 cp s3://$S3_BUCKET/sriov-init.sh /opt/dpdk/sriov-init.sh --region $REGION &
+pids="$pids $!"
+aws s3 cp s3://$S3_BUCKET/config-sriov.sh /opt/dpdk/config-sriov.sh --region $REGION &
+pids="$pids $!"
+aws s3 cp s3://$S3_BUCKET/dpdk-resource-builder.py /opt/dpdk/dpdk-resource-builder.py --region $REGION &
+pids="$pids $!"
+
+for pid in $pids; do
+    wait $pid || { log "Failed to download DPDK scripts"; exit 1; }
+done
 
 # Download new SR-IOV CNI installer script
 aws s3 cp s3://$S3_BUCKET/install-sriov-cni.sh /opt/dpdk/install-sriov-cni.sh --region $REGION 2>/dev/null || {
@@ -112,9 +115,16 @@ SRIOV_CNI_INSTALLER
 
 chmod +x /opt/dpdk/*.sh /opt/dpdk/*.py
 
-# Download systemd service files from S3
-aws s3 cp s3://$S3_BUCKET/sriov-init.service /usr/lib/systemd/system/sriov-init.service --region $REGION
-aws s3 cp s3://$S3_BUCKET/config-sriov.service /usr/lib/systemd/system/config-sriov.service --region $REGION
+# Download systemd service files from S3 (in parallel)
+pids=""
+aws s3 cp s3://$S3_BUCKET/sriov-init.service /usr/lib/systemd/system/sriov-init.service --region $REGION &
+pids="$pids $!"
+aws s3 cp s3://$S3_BUCKET/config-sriov.service /usr/lib/systemd/system/config-sriov.service --region $REGION &
+pids="$pids $!"
+
+for pid in $pids; do
+    wait $pid || { log "Failed to download service files"; exit 1; }
+done
 
 # Install SR-IOV CNI binary
 log "Installing SR-IOV CNI binary"
