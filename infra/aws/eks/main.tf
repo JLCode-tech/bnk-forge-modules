@@ -14,14 +14,39 @@ data "aws_ami" "eks_worker" {
   owners      = ["602401143452"] # Amazon EKS AMI Account ID
 }
 
+# KMS Key for EKS Secret Encryption
+resource "aws_kms_key" "eks_secrets" {
+  description             = "KMS key for EKS secret encryption"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-eks-secrets-key"
+  })
+}
+
+resource "aws_kms_alias" "eks_secrets" {
+  name          = "alias/${var.project_name}-eks-secrets-key"
+  target_key_id = aws_kms_key.eks_secrets.key_id
+}
+
 # EKS Cluster - using security module IAM roles
 resource "aws_eks_cluster" "main" {
   name     = "${var.project_name}-cluster"
   role_arn = var.eks_cluster_role_arn
   version  = var.kubernetes_version
-  
+
+  enabled_cluster_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+
+  encryption_config {
+    provider {
+      key_arn = aws_kms_key.eks_secrets.arn
+    }
+    resources = ["secrets"]
+  }
+
   vpc_config {
-    subnet_ids              = concat(
+    subnet_ids = concat(
       var.private_external_subnet_ids,
       var.private_internal_subnet_ids
     )
@@ -30,11 +55,11 @@ resource "aws_eks_cluster" "main" {
     public_access_cidrs     = [var.user_ip]
     security_group_ids      = [var.vpc_security_group_id]
   }
-  
+
   depends_on = [
     # No explicit depends_on needed - Terragrunt handles dependencies
   ]
-  
+
   tags = var.common_tags
 }
 
