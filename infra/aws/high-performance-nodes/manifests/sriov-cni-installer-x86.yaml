@@ -38,7 +38,8 @@ spec:
         effect: NoSchedule
       initContainers:
       - name: install-sriov-cni
-        image: ghcr.io/k8snetworkplumbingwg/sriov-cni:latest
+        # Sentinel: Pinned version to avoid mutable tag 'latest'
+        image: ghcr.io/k8snetworkplumbingwg/sriov-cni:v2.8.0
         command: 
         - /bin/sh
         - -c

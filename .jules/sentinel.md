@@ -2,3 +2,8 @@
 **Vulnerability:** The infrastructure private key was being passed to the Jumphost's User Data and written to the filesystem. This exposed the key in the instance metadata (accessible to anyone on the instance) and on the disk.
 **Learning:** Never pass sensitive data like private keys into `user_data`. Instance metadata is not a secure storage mechanism for long-lived secrets.
 **Prevention:** Use SSH Agent Forwarding for accessing other instances from a bastion/jumphost. The private key should remain on the operator's machine.
+
+## 2026-01-06 - [HIGH] Insecure Binary Download in Shell Scripts
+**Vulnerability:** The `dpdk-setup.sh` script attempted to download `sriov-cni` binary from GitHub Releases using the `latest` tag without checksum verification. This introduced supply chain risk (mutable tag) and broke when the project stopped publishing binaries.
+**Learning:** External dependencies in shell scripts must be pinned to specific versions and checksummed. Reliance on `latest` is fragile and insecure.
+**Prevention:** Pin container image versions in Kubernetes manifests (e.g., `sriov-cni:v2.8.0`) and use DaemonSets for installation instead of ad-hoc binary downloads in UserData.
