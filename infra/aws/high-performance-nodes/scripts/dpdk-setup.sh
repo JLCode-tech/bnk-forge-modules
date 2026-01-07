@@ -208,22 +208,25 @@ fi
 log "Starting F5 SPK IRQ optimization for NUMA node $NUMA_NODE"
 
 # Set IRQ affinity for network interfaces to complement NUMA node
+# Optimized: use /proc/interrupts to find interface IRQs instead of iterating all IRQs
+AFFINITY_MASK="0f"
+if [ "$NUMA_NODE" != "0" ]; then
+    AFFINITY_MASK="f0"
+fi
+
 for iface in $(ls /sys/class/net/ | grep eth); do
-    if [ -f "/proc/irq/*/smp_affinity" ]; then
-        for irq_dir in /proc/irq/*/; do
-            if [ -f "${irq_dir}smp_affinity" ]; then
-                irq=$(basename "$irq_dir")
-                if [ "$irq" != "*" ] && [ -f "/proc/irq/$irq/smp_affinity" ]; then
-                    # Set IRQ affinity based on NUMA node
-                    if [ "$NUMA_NODE" = "0" ]; then
-                        echo 0f > /proc/irq/$irq/smp_affinity 2>/dev/null || true
-                    else
-                        echo f0 > /proc/irq/$irq/smp_affinity 2>/dev/null || true
-                    fi
-                fi
-            fi
-        done
-    fi
+    log "Processing IRQ affinity for interface: $iface"
+
+    # Extract IRQs associated with this interface from /proc/interrupts
+    # Columns: IRQ number is $1 (with colon, e.g. "123:"), and we look for $iface in the line
+    irqs=$(grep "$iface" /proc/interrupts | awk '{print $1}' | tr -d ':')
+
+    for irq in $irqs; do
+        if [ -n "$irq" ] && [ -f "/proc/irq/$irq/smp_affinity" ]; then
+            log "Setting affinity for IRQ $irq ($iface) to $AFFINITY_MASK"
+            echo "$AFFINITY_MASK" > "/proc/irq/$irq/smp_affinity" 2>/dev/null || log "Failed to set affinity for IRQ $irq"
+        fi
+    done
 done
 
 log "F5 SPK IRQ optimization completed"
