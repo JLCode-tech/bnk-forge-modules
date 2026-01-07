@@ -102,6 +102,42 @@ resource "aws_s3_bucket_public_access_block" "dpdk_scripts" {
   restrict_public_buckets = true
 }
 
+# Enable server-side encryption by default
+resource "aws_s3_bucket_server_side_encryption_configuration" "dpdk_scripts" {
+  bucket = aws_s3_bucket.dpdk_scripts.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+# Enforce SSL/TLS for all requests
+resource "aws_s3_bucket_policy" "enforce_ssl" {
+  bucket = aws_s3_bucket.dpdk_scripts.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "EnforceTLS"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:*"
+        Resource = [
+          aws_s3_bucket.dpdk_scripts.arn,
+          "${aws_s3_bucket.dpdk_scripts.arn}/*"
+        ]
+        Condition = {
+          Bool = {
+            "aws:SecureTransport" = "false"
+          }
+        }
+      }
+    ]
+  })
+}
+
 # Upload DPDK scripts to S3
 resource "aws_s3_object" "dpdk_setup_script" {
   bucket = aws_s3_bucket.dpdk_scripts.id
