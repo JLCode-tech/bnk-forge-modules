@@ -207,24 +207,45 @@ fi
 
 log "Starting F5 SPK IRQ optimization for NUMA node $NUMA_NODE"
 
-# Set IRQ affinity for network interfaces to complement NUMA node
-for iface in $(ls /sys/class/net/ | grep eth); do
-    if [ -f "/proc/irq/*/smp_affinity" ]; then
-        for irq_dir in /proc/irq/*/; do
-            if [ -f "${irq_dir}smp_affinity" ]; then
-                irq=$(basename "$irq_dir")
-                if [ "$irq" != "*" ] && [ -f "/proc/irq/$irq/smp_affinity" ]; then
-                    # Set IRQ affinity based on NUMA node
-                    if [ "$NUMA_NODE" = "0" ]; then
-                        echo 0f > /proc/irq/$irq/smp_affinity 2>/dev/null || true
-                    else
-                        echo f0 > /proc/irq/$irq/smp_affinity 2>/dev/null || true
-                    fi
-                fi
-            fi
-        done
-    fi
-done
+# Optimize IRQ affinity setting
+# Performance Improvement: Replaced broken O(N*M) nested loops and fixed glob syntax error
+# that prevented execution. New implementation uses awk for single-pass O(K) processing
+# of /proc/interrupts to target only relevant network IRQs.
+log "Applying IRQ affinity settings..."
+
+# Define affinity mask based on NUMA node
+# If NUMA_NODE is 0, we use mask 0f. Otherwise (node 1), we use f0.
+AFFINITY_MASK="0f"
+if [ "$NUMA_NODE" != "0" ]; then
+    AFFINITY_MASK="f0"
+fi
+
+if [ -f /proc/interrupts ]; then
+    # Parse /proc/interrupts to find IRQs associated with 'eth' interfaces
+    # and set their affinity directly.
+    awk -v mask="$AFFINITY_MASK" '
+        /eth/ {
+            # Extract IRQ number (first field, usually ends with :)
+            irq = $1
+            sub(":", "", irq)
+
+            # Verify it is a number
+            if (irq ~ /^[0-9]+$/) {
+                # Construct path
+                affinity_file = "/proc/irq/" irq "/smp_affinity"
+
+                # Print command to be executed (or execute via system if safe, but generating commands is safer/easier to debug)
+                print "echo " mask " > " affinity_file
+            }
+        }
+    ' /proc/interrupts | while read -r cmd; do
+        # Execute the generated command
+        # We suppress errors because some IRQs might not be modifiable or gone
+        eval "$cmd" 2>/dev/null || true
+    done
+else
+    log "WARNING: /proc/interrupts not found, skipping IRQ optimization"
+fi
 
 log "F5 SPK IRQ optimization completed"
 F5_IRQ_SCRIPT
