@@ -78,38 +78,14 @@ done
 
 # Download new SR-IOV CNI installer script
 aws s3 cp s3://$S3_BUCKET/install-sriov-cni.sh /opt/dpdk/install-sriov-cni.sh --region $REGION 2>/dev/null || {
-    log "Creating SR-IOV CNI installer script locally"
+    log "Sentinel: Skipped insecure fallback download of SR-IOV CNI binary. Using DaemonSet instead."
+    # Create a dummy script to satisfy the call later
     cat << 'SRIOV_CNI_INSTALLER' > /opt/dpdk/install-sriov-cni.sh
 #!/bin/bash
-# Install SR-IOV CNI binary locally as fallback
-
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a /var/log/sriov-cni-install.log
 }
-
-log "Installing SR-IOV CNI binary to /opt/cni/bin/"
-
-# Create CNI bin directory if it doesn't exist
-mkdir -p /opt/cni/bin/
-
-# Download and install SR-IOV CNI binary
-cd /tmp
-wget -q https://github.com/k8snetworkplumbingwg/sriov-cni/releases/latest/download/sriov-cni-amd64.tgz
-tar -xzf sriov-cni-amd64.tgz
-cp sriov /opt/cni/bin/
-chmod +x /opt/cni/bin/sriov
-
-# Verify installation
-if [ -f "/opt/cni/bin/sriov" ]; then
-    log "SR-IOV CNI binary installed successfully"
-    ls -la /opt/cni/bin/sriov
-else
-    log "ERROR: SR-IOV CNI binary installation failed"
-    exit 1
-fi
-
-# Cleanup
-rm -f /tmp/sriov-cni-amd64.tgz /tmp/sriov
+log "Sentinel: Host-level SR-IOV CNI installation skipped. Relying on DaemonSet for CNI installation."
 SRIOV_CNI_INSTALLER
 }
 
@@ -207,45 +183,21 @@ fi
 
 log "Starting F5 SPK IRQ optimization for NUMA node $NUMA_NODE"
 
-# Optimize IRQ affinity setting
-# Performance Improvement: Replaced broken O(N*M) nested loops and fixed glob syntax error
-# that prevented execution. New implementation uses awk for single-pass O(K) processing
-# of /proc/interrupts to target only relevant network IRQs.
-log "Applying IRQ affinity settings..."
+# Set IRQ affinity for network interfaces to complement NUMA node
+# Extract IRQs for eth* interfaces from /proc/interrupts in a single pass
+# This avoids O(N*M) nested loops and process spawning overhead
+irqs=$(awk '$NF ~ /^eth/ { sub(/:/, "", $1); print $1 }' /proc/interrupts)
 
-# Define affinity mask based on NUMA node
-# If NUMA_NODE is 0, we use mask 0f. Otherwise (node 1), we use f0.
-AFFINITY_MASK="0f"
-if [ "$NUMA_NODE" != "0" ]; then
-    AFFINITY_MASK="f0"
-fi
-
-if [ -f /proc/interrupts ]; then
-    # Parse /proc/interrupts to find IRQs associated with 'eth' interfaces
-    # and set their affinity directly.
-    awk -v mask="$AFFINITY_MASK" '
-        /eth/ {
-            # Extract IRQ number (first field, usually ends with :)
-            irq = $1
-            sub(":", "", irq)
-
-            # Verify it is a number
-            if (irq ~ /^[0-9]+$/) {
-                # Construct path
-                affinity_file = "/proc/irq/" irq "/smp_affinity"
-
-                # Print command to be executed (or execute via system if safe, but generating commands is safer/easier to debug)
-                print "echo " mask " > " affinity_file
-            }
-        }
-    ' /proc/interrupts | while read -r cmd; do
-        # Execute the generated command
-        # We suppress errors because some IRQs might not be modifiable or gone
-        eval "$cmd" 2>/dev/null || true
-    done
-else
-    log "WARNING: /proc/interrupts not found, skipping IRQ optimization"
-fi
+for irq in $irqs; do
+    if [ -f "/proc/irq/$irq/smp_affinity" ]; then
+        # Set IRQ affinity based on NUMA node
+        if [ "$NUMA_NODE" = "0" ]; then
+            echo 0f > /proc/irq/$irq/smp_affinity 2>/dev/null || true
+        else
+            echo f0 > /proc/irq/$irq/smp_affinity 2>/dev/null || true
+        fi
+    fi
+done
 
 log "F5 SPK IRQ optimization completed"
 F5_IRQ_SCRIPT
