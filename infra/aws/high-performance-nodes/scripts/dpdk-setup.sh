@@ -78,38 +78,14 @@ done
 
 # Download new SR-IOV CNI installer script
 aws s3 cp s3://$S3_BUCKET/install-sriov-cni.sh /opt/dpdk/install-sriov-cni.sh --region $REGION 2>/dev/null || {
-    log "Creating SR-IOV CNI installer script locally"
+    log "Sentinel: Skipped insecure fallback download of SR-IOV CNI binary. Using DaemonSet instead."
+    # Create a dummy script to satisfy the call later
     cat << 'SRIOV_CNI_INSTALLER' > /opt/dpdk/install-sriov-cni.sh
 #!/bin/bash
-# Install SR-IOV CNI binary locally as fallback
-
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a /var/log/sriov-cni-install.log
 }
-
-log "Installing SR-IOV CNI binary to /opt/cni/bin/"
-
-# Create CNI bin directory if it doesn't exist
-mkdir -p /opt/cni/bin/
-
-# Download and install SR-IOV CNI binary
-cd /tmp
-wget -q https://github.com/k8snetworkplumbingwg/sriov-cni/releases/latest/download/sriov-cni-amd64.tgz
-tar -xzf sriov-cni-amd64.tgz
-cp sriov /opt/cni/bin/
-chmod +x /opt/cni/bin/sriov
-
-# Verify installation
-if [ -f "/opt/cni/bin/sriov" ]; then
-    log "SR-IOV CNI binary installed successfully"
-    ls -la /opt/cni/bin/sriov
-else
-    log "ERROR: SR-IOV CNI binary installation failed"
-    exit 1
-fi
-
-# Cleanup
-rm -f /tmp/sriov-cni-amd64.tgz /tmp/sriov
+log "Sentinel: Host-level SR-IOV CNI installation skipped. Relying on DaemonSet for CNI installation."
 SRIOV_CNI_INSTALLER
 }
 
