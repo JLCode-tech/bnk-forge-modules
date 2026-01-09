@@ -255,7 +255,12 @@ log "Waiting for Lambda ENI attachment"
 MAX_WAIT=300
 WAIT_TIME=0
 while [ $WAIT_TIME -lt $MAX_WAIT ]; do
-    INTERFACE_COUNT=$(ls /sys/class/net/ | grep -E '^eth[0-9]+$' | wc -l)
+    # Optimization: Use Bash glob expansion instead of ls | grep | wc
+    # This avoids spawning 3 subshells per iteration
+    shopt -s nullglob
+    eth_interfaces=(/sys/class/net/eth[0-9]*)
+    INTERFACE_COUNT=${#eth_interfaces[@]}
+    shopt -u nullglob
     log "Found $INTERFACE_COUNT network interfaces"
     
     if [ $INTERFACE_COUNT -ge 3 ]; then
@@ -268,11 +273,15 @@ while [ $WAIT_TIME -lt $MAX_WAIT ]; do
 done
 
 # Bring up interfaces
-for interface in $(ls /sys/class/net/ | grep eth); do
+# Optimization: Use Bash glob expansion to avoid spawning processes
+shopt -s nullglob
+for interface_path in /sys/class/net/eth*; do
+    interface=${interface_path##*/}
     log "Bringing up interface: $interface"
     ip link set $interface up 2>/dev/null || true
     echo "ifconfig $interface up" >> /etc/rc.d/rc.local
 done
+shopt -u nullglob
 
 # =======================
 # HUGEPAGES MOUNT POINTS
