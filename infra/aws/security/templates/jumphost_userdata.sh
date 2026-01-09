@@ -65,7 +65,12 @@ rm -rf aws awscliv2.zip
 
 # Install Helm
 echo "Installing Helm..."
-curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+HELM_VERSION="v3.14.0"
+curl -fsSL https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz -o helm.tar.gz
+tar -xzf helm.tar.gz
+mv linux-amd64/helm /usr/local/bin/helm
+rm -rf linux-amd64 helm.tar.gz
+chmod +x /usr/local/bin/helm
 
 # Install k9s (reliable method with version pinning)
 echo "Installing k9s..."
@@ -78,7 +83,8 @@ rm -f k9s.tar.gz
 
 # Install yq
 echo "Installing yq..."
-download_with_retry "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64" "/usr/local/bin/yq"
+YQ_VERSION="v4.50.1"
+download_with_retry "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64" "/usr/local/bin/yq"
 chmod +x /usr/local/bin/yq
 
 # Setup Docker
