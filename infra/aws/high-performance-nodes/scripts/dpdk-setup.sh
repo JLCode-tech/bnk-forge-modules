@@ -208,21 +208,18 @@ fi
 log "Starting F5 SPK IRQ optimization for NUMA node $NUMA_NODE"
 
 # Set IRQ affinity for network interfaces to complement NUMA node
-for iface in $(ls /sys/class/net/ | grep eth); do
-    if [ -f "/proc/irq/*/smp_affinity" ]; then
-        for irq_dir in /proc/irq/*/; do
-            if [ -f "${irq_dir}smp_affinity" ]; then
-                irq=$(basename "$irq_dir")
-                if [ "$irq" != "*" ] && [ -f "/proc/irq/$irq/smp_affinity" ]; then
-                    # Set IRQ affinity based on NUMA node
-                    if [ "$NUMA_NODE" = "0" ]; then
-                        echo 0f > /proc/irq/$irq/smp_affinity 2>/dev/null || true
-                    else
-                        echo f0 > /proc/irq/$irq/smp_affinity 2>/dev/null || true
-                    fi
-                fi
-            fi
-        done
+# Extract IRQs for eth* interfaces from /proc/interrupts in a single pass
+# This avoids O(N*M) nested loops and process spawning overhead
+irqs=$(awk '$NF ~ /^eth/ { sub(/:/, "", $1); print $1 }' /proc/interrupts)
+
+for irq in $irqs; do
+    if [ -f "/proc/irq/$irq/smp_affinity" ]; then
+        # Set IRQ affinity based on NUMA node
+        if [ "$NUMA_NODE" = "0" ]; then
+            echo 0f > /proc/irq/$irq/smp_affinity 2>/dev/null || true
+        else
+            echo f0 > /proc/irq/$irq/smp_affinity 2>/dev/null || true
+        fi
     fi
 done
 
