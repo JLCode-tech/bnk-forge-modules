@@ -49,6 +49,11 @@ fi
 log "Cloning Amazon drivers repository"
 cd /opt
 git clone https://github.com/amzn/amzn-drivers.git
+cd amzn-drivers
+# Pin to specific commit to prevent supply chain attacks and ensure stability
+# Commit date: 2024-05-23
+git checkout 46e50d6265ef6669877610549205973955748039
+cd ..
 
 # Run VFIO patch script from cloned repo (avoids redundant downloads)
 log "Setting up VFIO patches"
