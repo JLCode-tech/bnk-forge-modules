@@ -37,20 +37,35 @@ def get_ena_devices():
 def get_driver_info(pci_addr):
     """Get current driver and interface information"""
     # Get current driver
-    ret, out, err = run_cmd(f"readlink /sys/bus/pci/devices/{pci_addr}/driver 2>/dev/null")
-    driver = out.strip().split('/')[-1] if out.strip() else "none"
+    driver_link = f"/sys/bus/pci/devices/{pci_addr}/driver"
+    try:
+        driver_path = os.readlink(driver_link)
+        driver = os.path.basename(driver_path)
+    except OSError:
+        driver = "none"
     
     # Get interface name if available
     interface = ""
-    ret, out, err = run_cmd(f"ls /sys/bus/pci/devices/{pci_addr}/net/ 2>/dev/null")
-    if ret == 0 and out.strip():
-        interface = out.strip().split()[0]
+    net_dir = f"/sys/bus/pci/devices/{pci_addr}/net/"
+    try:
+        files = os.listdir(net_dir)
+        if files:
+            interface = sorted(files)[0]
+    except OSError:
+        pass
     
     # Check if interface is active
     active = False
     if interface:
-        ret, out, err = run_cmd(f"ip link show {interface} 2>/dev/null | grep 'state UP'")
-        active = ret == 0
+        operstate_path = f"/sys/class/net/{interface}/operstate"
+        try:
+            with open(operstate_path, "r") as f:
+                state = f.read().strip()
+                # 'up' or 'unknown' (some virt interfaces) are considered active if bound
+                if state.lower() == "up":
+                    active = True
+        except OSError:
+            pass
     
     return driver, interface, active
 
@@ -90,10 +105,15 @@ def bind_device(pci_addr, driver):
             print(f"  Warning: Failed to add device ID: {err}")
         
         # Enable unsafe NOIOMMU mode if IOMMU groups are empty
-        ret, out, err = run_cmd("ls /sys/kernel/iommu_groups/ | wc -l")
-        if ret == 0 and int(out.strip()) <= 2:  # Only . and .. directories
-            print("  Enabling unsafe NOIOMMU mode (no IOMMU detected)")
-            run_cmd("echo 1 > /sys/module/vfio/parameters/enable_unsafe_noiommu_mode")
+        try:
+            # Check if iommu_groups is empty (only has . and .. or empty)
+            # os.listdir returns only files/dirs, not . and ..
+            if len(os.listdir("/sys/kernel/iommu_groups/")) == 0:
+                print("  Enabling unsafe NOIOMMU mode (no IOMMU detected)")
+                run_cmd("echo 1 > /sys/module/vfio/parameters/enable_unsafe_noiommu_mode")
+        except OSError:
+             # Directory might not exist
+             pass
     
     # Step 4: Probe the device to bind it
     print(f"  Probing device to bind to {driver}")
