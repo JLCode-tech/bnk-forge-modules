@@ -209,15 +209,14 @@ spec:
           
           # Install SR-IOV CNI
           log "Installing SR-IOV CNI..."
-          chroot /host bash -c "
-            mkdir -p /opt/cni/bin
-            cd /tmp
-            wget -q https://github.com/k8snetworkplumbingwg/sriov-cni/releases/latest/download/sriov-cni-amd64.tgz
-            tar -xzf sriov-cni-amd64.tgz
-            cp sriov /opt/cni/bin/
-            chmod +x /opt/cni/bin/sriov
-            rm -f sriov-cni-amd64.tgz sriov
-          "
+          # Sentinel: Removed insecure wget download. SR-IOV CNI is installed by sriov-cni-installer-x86.yaml
+          # which uses a pinned container image (ghcr.io/k8snetworkplumbingwg/sriov-cni:v2.8.0).
+          # The binary will be available at /opt/cni/bin/sriov on the host.
+          if [ -f /host/opt/cni/bin/sriov ]; then
+            log "SR-IOV CNI binary found at /opt/cni/bin/sriov"
+          else
+            log "WARNING: SR-IOV CNI binary NOT found at /opt/cni/bin/sriov. Ensure sriov-cni-installer is running."
+          fi
           
           # Create SR-IOV device plugin configuration
           log "Creating SR-IOV configuration..."
