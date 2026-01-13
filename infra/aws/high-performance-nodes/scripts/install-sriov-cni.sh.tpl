@@ -15,11 +15,13 @@ mkdir -p /opt/cni/bin/
 # Determine the correct download URL based on runtime architecture
 case $ARCH in
     "x86_64")
-        SRIOV_CNI_URL="https://github.com/k8snetworkplumbingwg/sriov-cni/releases/latest/download/sriov-cni-amd64.tgz"
+        # Sentinel: Pinned to v2.10.0 to prevent supply chain attacks via mutable 'latest' tag
+        SRIOV_CNI_URL="https://github.com/k8snetworkplumbingwg/sriov-cni/releases/download/v2.10.0/sriov-cni-amd64.tgz"
         log "Using x86_64/amd64 SR-IOV CNI binary"
         ;;
     "aarch64")
-        SRIOV_CNI_URL="https://github.com/k8snetworkplumbingwg/sriov-cni/releases/latest/download/sriov-cni-arm64.tgz"
+        # Sentinel: Pinned to v2.10.0 to prevent supply chain attacks via mutable 'latest' tag
+        SRIOV_CNI_URL="https://github.com/k8snetworkplumbingwg/sriov-cni/releases/download/v2.10.0/sriov-cni-arm64.tgz"
         log "Using ARM64 SR-IOV CNI binary"
         ;;
     *)

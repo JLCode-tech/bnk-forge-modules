@@ -212,7 +212,8 @@ spec:
           chroot /host bash -c "
             mkdir -p /opt/cni/bin
             cd /tmp
-            wget -q https://github.com/k8snetworkplumbingwg/sriov-cni/releases/latest/download/sriov-cni-amd64.tgz
+            # Sentinel: Pinned to v2.10.0 to prevent supply chain attacks via mutable 'latest' tag
+            wget -q https://github.com/k8snetworkplumbingwg/sriov-cni/releases/download/v2.10.0/sriov-cni-amd64.tgz
             tar -xzf sriov-cni-amd64.tgz
             cp sriov /opt/cni/bin/
             chmod +x /opt/cni/bin/sriov
