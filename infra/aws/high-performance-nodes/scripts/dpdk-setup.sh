@@ -15,6 +15,40 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a /var/log/dpdk-setup.log
 }
 
+# Input validation functions
+validate_int() {
+    if ! [[ "$1" =~ ^[0-9]+$ ]]; then
+        log "Error: Invalid integer input: $1"
+        exit 1
+    fi
+}
+
+validate_alphanumeric_dash() {
+    if ! [[ "$1" =~ ^[a-zA-Z0-9-]+$ ]]; then
+        log "Error: Invalid input format (expected alphanumeric+dash): $1"
+        exit 1
+    fi
+}
+
+validate_s3_bucket() {
+    if ! [[ "$1" =~ ^[a-zA-Z0-9.-]+$ ]]; then
+        log "Error: Invalid S3 bucket name: $1"
+        exit 1
+    fi
+}
+
+# Validate inputs
+validate_int "$HUGEPAGES_2MI"
+validate_int "$HUGEPAGES_1GI"
+validate_alphanumeric_dash "$REGION"
+if [ -n "$S3_BUCKET" ]; then
+    validate_s3_bucket "$S3_BUCKET"
+fi
+if [ "$F5_SPK_ENABLED" = "true" ]; then
+    validate_int "$F5_TMM_CPU_CORES"
+    validate_int "$F5_NUMA_NODE"
+fi
+
 log "Starting enhanced DPDK setup with F5 SPK support"
 log "Parameters: hugepages_2mi=$HUGEPAGES_2MI, hugepages_1gi=$HUGEPAGES_1GI, region=$REGION"
 log "F5 SPK: enabled=$F5_SPK_ENABLED, cpu_cores=$F5_TMM_CPU_CORES, numa_node=$F5_NUMA_NODE"
@@ -68,13 +102,13 @@ mkdir -p /opt/dpdk/
 
 # Download DPDK scripts from S3 (in parallel)
 pids=""
-aws s3 cp s3://$S3_BUCKET/dpdk-devbind.py /opt/dpdk/dpdk-devbind.py --region $REGION &
+aws s3 cp "s3://$S3_BUCKET/dpdk-devbind.py" /opt/dpdk/dpdk-devbind.py --region "$REGION" &
 pids="$pids $!"
-aws s3 cp s3://$S3_BUCKET/sriov-init.sh /opt/dpdk/sriov-init.sh --region $REGION &
+aws s3 cp "s3://$S3_BUCKET/sriov-init.sh" /opt/dpdk/sriov-init.sh --region "$REGION" &
 pids="$pids $!"
-aws s3 cp s3://$S3_BUCKET/config-sriov.sh /opt/dpdk/config-sriov.sh --region $REGION &
+aws s3 cp "s3://$S3_BUCKET/config-sriov.sh" /opt/dpdk/config-sriov.sh --region "$REGION" &
 pids="$pids $!"
-aws s3 cp s3://$S3_BUCKET/dpdk-resource-builder.py /opt/dpdk/dpdk-resource-builder.py --region $REGION &
+aws s3 cp "s3://$S3_BUCKET/dpdk-resource-builder.py" /opt/dpdk/dpdk-resource-builder.py --region "$REGION" &
 pids="$pids $!"
 
 for pid in $pids; do
@@ -82,7 +116,7 @@ for pid in $pids; do
 done
 
 # Download new SR-IOV CNI installer script
-aws s3 cp s3://$S3_BUCKET/install-sriov-cni.sh /opt/dpdk/install-sriov-cni.sh --region $REGION 2>/dev/null || {
+aws s3 cp "s3://$S3_BUCKET/install-sriov-cni.sh" /opt/dpdk/install-sriov-cni.sh --region "$REGION" 2>/dev/null || {
     log "Sentinel: Skipped insecure fallback download of SR-IOV CNI binary. Using DaemonSet instead."
     # Create a dummy script to satisfy the call later
     cat << 'SRIOV_CNI_INSTALLER' > /opt/dpdk/install-sriov-cni.sh
@@ -98,9 +132,9 @@ chmod +x /opt/dpdk/*.sh /opt/dpdk/*.py
 
 # Download systemd service files from S3 (in parallel)
 pids=""
-aws s3 cp s3://$S3_BUCKET/sriov-init.service /usr/lib/systemd/system/sriov-init.service --region $REGION &
+aws s3 cp "s3://$S3_BUCKET/sriov-init.service" /usr/lib/systemd/system/sriov-init.service --region "$REGION" &
 pids="$pids $!"
-aws s3 cp s3://$S3_BUCKET/config-sriov.service /usr/lib/systemd/system/config-sriov.service --region $REGION &
+aws s3 cp "s3://$S3_BUCKET/config-sriov.service" /usr/lib/systemd/system/config-sriov.service --region "$REGION" &
 pids="$pids $!"
 
 for pid in $pids; do

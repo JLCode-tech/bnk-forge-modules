@@ -12,3 +12,8 @@
 **Vulnerability:** Shell scripts were cloning Git repositories (`git clone`) without checking out a specific commit or tag. This exposed the infrastructure to immediate breakage or compromise if the upstream repository changed.
 **Learning:** `git clone` pulls the default branch (usually main/master) which is mutable. Always pin to a specific immutable commit hash for reproducibility and security.
 **Prevention:** Immediately after `git clone`, enter the directory and run `git checkout <commit-hash>`. Do not rely on tags as they can be moved.
+
+## 2026-05-23 - [CRITICAL] Command Injection in UserData Scripts
+**Vulnerability:** The `dpdk-setup.sh` script used unvalidated and unquoted user inputs (`HUGEPAGES_2MI`, `S3_BUCKET`) in `sed` and `aws s3 cp` commands. This allowed arbitrary command execution via "Second Order Injection" (writing to `/etc/default/grub` which is later sourced) and direct shell injection.
+**Learning:** Shell scripts running as root (UserData) are high-value targets. Variables expanded in commands (especially `sed` scripts or unquoted arguments) must be strictly validated.
+**Prevention:** Implement strict input validation (e.g., regex for integers/alphanumeric) at the start of scripts. Quote all variable expansions. Avoid constructing code/config files dynamically from user input if possible.
