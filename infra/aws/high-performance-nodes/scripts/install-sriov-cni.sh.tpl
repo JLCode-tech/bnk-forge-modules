@@ -13,14 +13,17 @@ log "Installing SR-IOV CNI binary for architecture: $ARCH"
 mkdir -p /opt/cni/bin/
 
 # Determine the correct download URL based on runtime architecture
+# Sentinel: Pinned to specific version v2.10.0 to prevent supply chain attacks via mutable tags
+SRIOV_CNI_VERSION="v2.10.0"
+
 case $ARCH in
     "x86_64")
-        SRIOV_CNI_URL="https://github.com/k8snetworkplumbingwg/sriov-cni/releases/latest/download/sriov-cni-amd64.tgz"
-        log "Using x86_64/amd64 SR-IOV CNI binary"
+        SRIOV_CNI_URL="https://github.com/k8snetworkplumbingwg/sriov-cni/releases/download/${SRIOV_CNI_VERSION}/sriov-cni-amd64.tgz"
+        log "Using x86_64/amd64 SR-IOV CNI binary (Version: ${SRIOV_CNI_VERSION})"
         ;;
     "aarch64")
-        SRIOV_CNI_URL="https://github.com/k8snetworkplumbingwg/sriov-cni/releases/latest/download/sriov-cni-arm64.tgz"
-        log "Using ARM64 SR-IOV CNI binary"
+        SRIOV_CNI_URL="https://github.com/k8snetworkplumbingwg/sriov-cni/releases/download/${SRIOV_CNI_VERSION}/sriov-cni-arm64.tgz"
+        log "Using ARM64 SR-IOV CNI binary (Version: ${SRIOV_CNI_VERSION})"
         ;;
     *)
         log "ERROR: Unsupported architecture: $ARCH"
