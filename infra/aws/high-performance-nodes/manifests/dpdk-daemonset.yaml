@@ -207,16 +207,16 @@ spec:
           log "Final PCI device status:"
           chroot /host /opt/dpdk/dpdk-devbind.py --status
           
-          # Install SR-IOV CNI
-          log "Installing SR-IOV CNI..."
+          # Verify SR-IOV CNI (installed by sriov-cni-installer DaemonSet)
+          log "Verifying SR-IOV CNI installation..."
           chroot /host bash -c "
-            mkdir -p /opt/cni/bin
-            cd /tmp
-            wget -q https://github.com/k8snetworkplumbingwg/sriov-cni/releases/latest/download/sriov-cni-amd64.tgz
-            tar -xzf sriov-cni-amd64.tgz
-            cp sriov /opt/cni/bin/
-            chmod +x /opt/cni/bin/sriov
-            rm -f sriov-cni-amd64.tgz sriov
+            if [ -f /opt/cni/bin/sriov ]; then
+                echo 'SR-IOV CNI binary found.'
+                ls -la /opt/cni/bin/sriov
+            else
+                echo 'ERROR: SR-IOV CNI binary NOT found. It should have been installed by sriov-cni-installer.'
+                exit 1
+            fi
           "
           
           # Create SR-IOV device plugin configuration
