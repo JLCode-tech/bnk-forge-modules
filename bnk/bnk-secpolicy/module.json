@@ -94,13 +94,6 @@
         "description": "Log level for security events (debug, info, warn, error)",
         "default": "info",
         "source": "user"
-      },
-      {
-        "name": "common_labels",
-        "type": "map(string)",
-        "description": "Common labels to apply to SecurityPolicy",
-        "default": {},
-        "source": "user"
       }
     ]
   },

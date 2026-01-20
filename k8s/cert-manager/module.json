@@ -83,13 +83,6 @@
         "description": "Memory resource limits for cert-manager",
         "default": "128Mi",
         "source": "user"
-      },
-      {
-        "name": "common_labels",
-        "type": "map(string)",
-        "description": "Common labels to apply to all resources",
-        "default": {},
-        "source": "user"
       }
     ]
   },

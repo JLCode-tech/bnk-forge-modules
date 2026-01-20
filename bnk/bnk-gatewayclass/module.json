@@ -95,13 +95,6 @@
         "description": "Description for the GatewayClass",
         "default": "BNK Gateway API GatewayClass",
         "source": "user"
-      },
-      {
-        "name": "common_labels",
-        "type": "map(string)",
-        "description": "Common labels to apply to GatewayClass",
-        "default": {},
-        "source": "user"
       }
     ]
   },

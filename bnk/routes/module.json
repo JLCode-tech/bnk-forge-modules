@@ -121,13 +121,6 @@
         "description": "Retry policy configuration",
         "default": null,
         "source": "user"
-      },
-      {
-        "name": "common_labels",
-        "type": "map(string)",
-        "description": "Common labels to apply to Route",
-        "default": {},
-        "source": "user"
       }
     ]
   },

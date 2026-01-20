@@ -29,20 +29,6 @@
   "inputs": {
     "required": [
       {
-        "name": "project_name",
-        "type": "string",
-        "description": "Name of the project (used for node group naming)",
-        "source": "user",
-        "example": "my-bnk-project"
-      },
-      {
-        "name": "environment",
-        "type": "string",
-        "description": "Environment name (dev, staging, prod)",
-        "source": "user",
-        "example": "dev"
-      },
-      {
         "name": "vpc_id",
         "type": "string",
         "description": "ID of the VPC",
@@ -148,13 +134,6 @@
         "type": "list(object)",
         "description": "Kubernetes taints to apply to nodes",
         "default": [],
-        "source": "user"
-      },
-      {
-        "name": "common_tags",
-        "type": "map(string)",
-        "description": "Common tags to apply to all resources",
-        "default": {},
         "source": "user"
       }
     ]

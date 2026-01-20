@@ -72,13 +72,6 @@
         "description": "Enable IPAM (IP Address Management) for NADs",
         "default": true,
         "source": "user"
-      },
-      {
-        "name": "common_labels",
-        "type": "map(string)",
-        "description": "Common labels to apply to all NADs",
-        "default": {},
-        "source": "user"
       }
     ]
   },

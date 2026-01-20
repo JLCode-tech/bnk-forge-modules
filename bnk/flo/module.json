@@ -92,13 +92,6 @@
         "source": "module",
         "from_module": "k8s/cert-manager",
         "from_output": "cert_manager_ready"
-      },
-      {
-        "name": "common_labels",
-        "type": "map(string)",
-        "description": "Common labels to apply to all Kubernetes resources",
-        "default": {},
-        "source": "user"
       }
     ]
   },

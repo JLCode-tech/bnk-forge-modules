@@ -25,20 +25,6 @@
   "inputs": {
     "required": [
       {
-        "name": "project_name",
-        "type": "string",
-        "description": "Name of the project (used for cluster naming)",
-        "source": "user",
-        "example": "my-bnk-project"
-      },
-      {
-        "name": "environment",
-        "type": "string",
-        "description": "Environment name (dev, staging, prod)",
-        "source": "user",
-        "example": "dev"
-      },
-      {
         "name": "vpc_id",
         "type": "string",
         "description": "ID of the VPC for EKS cluster",
@@ -157,13 +143,6 @@
         "type": "boolean",
         "description": "Enable EKS cluster add-ons (VPC CNI, CoreDNS, kube-proxy, EBS CSI)",
         "default": true,
-        "source": "user"
-      },
-      {
-        "name": "common_tags",
-        "type": "map(string)",
-        "description": "Common tags to apply to all resources",
-        "default": {},
         "source": "user"
       }
     ]

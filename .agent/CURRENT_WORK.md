@@ -15,6 +15,55 @@ Last Updated: 2026-01-20
 
 > Tasks completed in the last 30 days. Helps agents understand recent changes and context.
 
+### Module Variable Cleanup - Remove Project-Level Variables (2026-01-20)
+
+**Completed**: 2026-01-20
+**Duration**: 1 session
+**Agent**: Module Cleanup Agent
+
+**Description**:
+Cleaned up all module.json files by removing project-level variables that are automatically defined in root.hcl by bnk-forge. This eliminates duplication and confusion about what users actually need to configure.
+
+**Variables Removed**:
+- `project_name` - Defined in root.hcl (removed from infra/aws/vpc, security, eks, high-performance-nodes)
+- `environment` - Defined in root.hcl (removed from infra/aws/vpc, security, eks, high-performance-nodes)
+- `common_tags` - Defined in root.hcl (removed from all modules: infra/aws/vpc, security, eks, high-performance-nodes; k8s/cert-manager, network-setup; all bnk/ modules)
+
+**Key Outcomes**:
+- Removed 149 lines of duplicate variable declarations across 13 module.json files
+- Only module-specific user inputs remain with "source": "user"
+- Module dependency inputs remain with "source": "module"
+- All module.json files validated and pass JSON syntax checks
+- Terraform variables.tf files unchanged (they still declare these variables for Terragrunt inheritance)
+
+**Files Changed**:
+- `infra/aws/vpc/module.json` (removed project_name, environment, common_tags)
+- `infra/aws/security/module.json` (removed project_name, environment, common_tags)
+- `infra/aws/eks/module.json` (removed project_name, environment, common_tags)
+- `infra/aws/high-performance-nodes/module.json` (removed project_name, environment, common_tags)
+- `k8s/cert-manager/module.json` (removed common_labels)
+- `k8s/network-setup/module.json` (removed common_labels)
+- `bnk/far-setup/module.json` (removed common_labels)
+- `bnk/flo/module.json` (removed common_labels)
+- `bnk/bnk-gatewayclass/module.json` (removed common_labels)
+- `bnk/gateway/module.json` (removed common_labels)
+- `bnk/routes/module.json` (removed common_labels)
+- `bnk/bnk-secpolicy/module.json` (removed common_labels)
+- `bnk/bnk-netpolicy/module.json` (removed common_labels)
+
+**Impact on bnk-forge**:
+- root.hcl will only contain variables users actually need to edit
+- Module-specific variables stay focused on what each module uniquely needs
+- Dependency wiring (module outputs → inputs) remains clean and automatic
+- No more EDIT_ME_PROJECT_NAME placeholders for project-level variables
+
+**Notes for Future Work**:
+- This cleanup supports the dependency wiring enhancement (ADR-006)
+- When adding new modules, avoid adding project_name, environment, aws_region, common_tags to inputs
+- Only add module-specific user inputs or module dependency inputs
+
+---
+
 ### P0 Documentation: Module Dependency Wiring (2026-01-20)
 
 **Completed**: 2026-01-20

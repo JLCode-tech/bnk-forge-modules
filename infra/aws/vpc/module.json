@@ -16,20 +16,6 @@
   "inputs": {
     "required": [
       {
-        "name": "project_name",
-        "type": "string",
-        "description": "Name of the project - used for resource naming",
-        "source": "user",
-        "example": "my-bnk-project"
-      },
-      {
-        "name": "environment",
-        "type": "string",
-        "description": "Environment name (dev, staging, prod)",
-        "source": "user",
-        "example": "dev"
-      },
-      {
         "name": "vpc_cidr",
         "type": "string",
         "description": "CIDR block for VPC",
@@ -72,15 +58,7 @@
         "example": "10.0.21.0/24"
       }
     ],
-    "optional": [
-      {
-        "name": "common_tags",
-        "type": "map(string)",
-        "description": "Common tags to apply to all resources",
-        "default": {},
-        "source": "user"
-      }
-    ]
+    "optional": []
   },
   "outputs": {
     "key_outputs": [

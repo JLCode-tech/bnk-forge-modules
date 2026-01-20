@@ -96,13 +96,6 @@
         "description": "Session persistence configuration",
         "default": null,
         "source": "user"
-      },
-      {
-        "name": "common_labels",
-        "type": "map(string)",
-        "description": "Common labels to apply to NetworkPolicy",
-        "default": {},
-        "source": "user"
       }
     ]
   },
