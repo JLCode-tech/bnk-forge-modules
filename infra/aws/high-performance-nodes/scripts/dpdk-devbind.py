@@ -37,14 +37,22 @@ def get_ena_devices():
 def get_driver_info(pci_addr):
     """Get current driver and interface information"""
     # Get current driver
-    ret, out, err = run_cmd(f"readlink /sys/bus/pci/devices/{pci_addr}/driver 2>/dev/null")
-    driver = out.strip().split('/')[-1] if out.strip() else "none"
+    try:
+        driver_path = os.readlink(f"/sys/bus/pci/devices/{pci_addr}/driver")
+        driver = os.path.basename(driver_path)
+    except OSError:
+        driver = "none"
     
     # Get interface name if available
     interface = ""
-    ret, out, err = run_cmd(f"ls /sys/bus/pci/devices/{pci_addr}/net/ 2>/dev/null")
-    if ret == 0 and out.strip():
-        interface = out.strip().split()[0]
+    try:
+        net_dir = f"/sys/bus/pci/devices/{pci_addr}/net/"
+        if os.path.exists(net_dir):
+            files = os.listdir(net_dir)
+            if files:
+                interface = sorted(files)[0]
+    except OSError:
+        pass
     
     # Check if interface is active
     active = False
@@ -68,15 +76,19 @@ def bind_device(pci_addr, driver):
     # Step 1: Unbind from current driver if bound
     if current_driver != "none":
         print(f"  Unbinding from {current_driver}")
-        ret, out, err = run_cmd(f"echo {pci_addr} > /sys/bus/pci/devices/{pci_addr}/driver/unbind")
-        if ret != 0:
-            print(f"  Warning: Failed to unbind from {current_driver}: {err}")
+        try:
+            with open(f"/sys/bus/pci/devices/{pci_addr}/driver/unbind", "w") as f:
+                f.write(pci_addr + "\n")
+        except OSError as e:
+            print(f"  Warning: Failed to unbind from {current_driver}: {e}")
     
     # Step 2: Set driver override
     print(f"  Setting driver override to {driver}")
-    ret, out, err = run_cmd(f"echo {driver} > /sys/bus/pci/devices/{pci_addr}/driver_override")
-    if ret != 0:
-        print(f"  Error: Failed to set driver override: {err}")
+    try:
+        with open(f"/sys/bus/pci/devices/{pci_addr}/driver_override", "w") as f:
+            f.write(driver + "\n")
+    except OSError as e:
+        print(f"  Error: Failed to set driver override: {e}")
         return False
     
     # Step 3: For vfio-pci, ensure module is loaded and device ID is added
@@ -85,21 +97,35 @@ def bind_device(pci_addr, driver):
         run_cmd("modprobe vfio-pci")
         
         print("  Adding ENA device ID to vfio-pci")
-        ret, out, err = run_cmd("echo '1d0f ec20' > /sys/bus/pci/drivers/vfio-pci/new_id")
-        if ret != 0:
-            print(f"  Warning: Failed to add device ID: {err}")
+        try:
+            with open("/sys/bus/pci/drivers/vfio-pci/new_id", "w") as f:
+                f.write("1d0f ec20\n")
+        except OSError as e:
+            print(f"  Warning: Failed to add device ID: {e}")
         
         # Enable unsafe NOIOMMU mode if IOMMU groups are empty
-        ret, out, err = run_cmd("ls /sys/kernel/iommu_groups/ | wc -l")
-        if ret == 0 and int(out.strip()) <= 2:  # Only . and .. directories
+        # Logic: Check if /sys/kernel/iommu_groups is empty. If it doesn't exist, we skip (matching original behavior).
+        iommu_groups_count = -1
+        try:
+            iommu_groups_count = len(os.listdir("/sys/kernel/iommu_groups/"))
+        except OSError:
+            pass
+
+        if iommu_groups_count == 0:
             print("  Enabling unsafe NOIOMMU mode (no IOMMU detected)")
-            run_cmd("echo 1 > /sys/module/vfio/parameters/enable_unsafe_noiommu_mode")
+            try:
+                with open("/sys/module/vfio/parameters/enable_unsafe_noiommu_mode", "w") as f:
+                    f.write("1\n")
+            except OSError as e:
+                print(f"  Warning: Failed to enable unsafe NOIOMMU mode: {e}")
     
     # Step 4: Probe the device to bind it
     print(f"  Probing device to bind to {driver}")
-    ret, out, err = run_cmd(f"echo {pci_addr} > /sys/bus/pci/drivers_probe")
-    if ret != 0:
-        print(f"  Error: Failed to probe device: {err}")
+    try:
+        with open("/sys/bus/pci/drivers_probe", "w") as f:
+            f.write(pci_addr + "\n")
+    except OSError as e:
+        print(f"  Error: Failed to probe device: {e}")
         return False
     
     # Verify binding worked
