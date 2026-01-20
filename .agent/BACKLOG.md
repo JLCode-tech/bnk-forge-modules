@@ -21,6 +21,37 @@ This backlog tracks prioritized work for the bnk-forge-modules repository. Items
 
 **None currently**
 
+### Integration with bnk-forge
+
+#### Module Dependency Wiring (Cross-Repo)
+**Status**: Planning Complete
+**Category**: Integration
+**Location**: Primarily bnk-forge, data source is bnk-forge-modules
+
+The module.json files contain rich dependency and I/O mapping data that bnk-forge needs to properly utilize. This is a cross-repo effort.
+
+**What bnk-forge-modules provides** (already exists):
+- `dependencies.required[]` in module.json
+- `inputs[].source: "module"` with `from_module`, `from_output`
+- `outputs[].used_by` mappings
+- `deployment.order` for correct sequencing
+
+**What bnk-forge needs to implement**:
+1. Parse module.json during catalog sync
+2. Use real dependencies instead of hardcoded rules
+3. Implement input wiring service
+4. Update root.hcl with outputs after apply
+5. Show real deps in UI
+
+**Implementation Plan**: `.agent/IMPLEMENTATION_PLAN_DEPENDENCY_WIRING.md`
+**Related ADR**: ADR-006 in `.agent/DECISIONS.md`
+
+**Acceptance Criteria**:
+- bnk-forge reads module.json dependencies
+- Adding EKS module shows VPC/Security as dependencies
+- After VPC apply, EKS sees vpc_id input as "ready"
+- root.hcl updated with real output values
+
 ---
 
 ## P1 - High Priority

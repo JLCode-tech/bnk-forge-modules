@@ -149,6 +149,52 @@ Implement multi-agent workflow structure:
 
 ---
 
+### ADR-006: Module Dependency and I/O Wiring Enhancement
+
+**Date**: 2026-01-20
+**Status**: Accepted
+**Deciders**: Repository Owner, Claude Code Agent
+
+**Context**:
+The `module.json` files contain rich metadata about module dependencies and input/output relationships:
+- `dependencies.required[]` - which modules must be deployed first
+- `inputs[].source: "module"` with `from_module` and `from_output` - how inputs should be wired
+- `outputs[].used_by` - which modules consume each output
+- `deployment.order` - correct ordering for deployment
+
+However, bnk-forge was not fully utilizing this data:
+- Dependencies were detected via hardcoded rules in `MODULE_DEPENDENCY_RULES`
+- Input wiring from module outputs was not implemented
+- root.hcl was not updated with real output values after module apply
+- UI showed "No dependencies" regardless of actual deps
+
+**Decision**:
+Implement full module dependency and I/O wiring:
+
+1. **Catalog Sync**: Parse `module.json` and store in `ModuleLibrary` table
+2. **Dependency Resolution**: Use `dependencies.required[]` instead of hardcoded rules
+3. **Input Wiring Service**: Track which inputs come from other modules
+4. **root.hcl Updates**: After module apply, update locals with real output values
+5. **UI Enhancement**: Display actual dependencies and input sources
+
+**Consequences**:
+- Positive: Accurate dependency detection from authoritative source
+- Positive: Automatic output→input wiring reduces manual configuration
+- Positive: Better UX with real dependency visualization
+- Positive: root.hcl stays in sync with deployed state
+- Negative: Requires bnk-forge code changes (Phases 1-5 in implementation plan)
+- Negative: Need to ensure module.json is kept in sync with Terraform code
+
+**Implementation Plan**: `.agent/IMPLEMENTATION_PLAN_DEPENDENCY_WIRING.md`
+
+**Related**:
+- `MODULE_METADATA_SCHEMA.md`
+- `DEPENDENCY_GRAPH.md`
+- `bnk-forge/backend/services/module_catalog_service.py`
+- `bnk-forge/backend/services/project_service.py`
+
+---
+
 ## Pending Decisions
 
 ### Azure Architecture Patterns
