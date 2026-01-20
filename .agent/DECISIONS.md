@@ -1,6 +1,6 @@
 # Architecture Decision Records - BNK-Forge Modules
 
-Last Updated: 2026-01-18
+Last Updated: 2026-01-20
 
 ## Overview
 
@@ -192,6 +192,51 @@ Implement full module dependency and I/O wiring:
 - `DEPENDENCY_GRAPH.md`
 - `bnk-forge/backend/services/module_catalog_service.py`
 - `bnk-forge/backend/services/project_service.py`
+
+---
+
+### ADR-007: Remove Project-Level Variables from Module Inputs
+
+**Date**: 2026-01-20
+**Status**: Accepted
+**Deciders**: Repository Owner, Claude Code Agent
+
+**Context**:
+Module.json files were declaring project-level variables like `project_name`, `environment`, `aws_region`, and `common_tags` in their `inputs.required` or `inputs.optional` arrays. However, bnk-forge automatically defines these variables in the generated root.hcl file for all projects.
+
+This created duplication issues:
+- Users saw `EDIT_ME_PROJECT_NAME` placeholders even though project_name was already defined in root.hcl
+- root.hcl contained redundant variable declarations
+- Confusion about what users actually needed to configure
+- Module inputs polluted with non-module-specific variables
+
+**Decision**:
+Remove all project-level variables from module.json `inputs` sections:
+- **Remove**: `project_name`, `environment`, `aws_region`, `aws_profile` (infrastructure config)
+- **Remove**: `common_tags`, `common_labels` (project-wide tagging)
+- **Keep**: Module-specific user inputs (e.g., `vpc_cidr`, `user_ip`, `license_mode`)
+- **Keep**: Module dependency inputs with `source: "module"` (e.g., `vpc_id` from infra/aws/vpc)
+
+Note: Terraform `variables.tf` files still declare these variables. They inherit values from root.hcl via Terragrunt.
+
+**Consequences**:
+- Positive: root.hcl only shows variables users actually need to configure
+- Positive: Clear separation between project config and module config
+- Positive: No more duplicate/redundant variable declarations
+- Positive: Cleaner module.json files (149 lines removed across 13 modules)
+- Positive: Better UX in bnk-forge UI (no misleading placeholders)
+- Negative: Need to maintain discipline when creating new modules (don't add project-level vars)
+- Negative: Need to update bnk-forge documentation to reflect this convention
+
+**Modules Updated**:
+- infra/aws/vpc, security, eks, high-performance-nodes (removed project_name, environment, common_tags)
+- k8s/cert-manager, network-setup (removed common_labels)
+- bnk/far-setup, flo, bnk-gatewayclass, gateway, routes, bnk-secpolicy, bnk-netpolicy (removed common_labels)
+
+**Related**:
+- ADR-006 (Module Dependency Wiring) - supports cleaner input definitions
+- `MODULE_METADATA_SCHEMA.md` - should document this convention
+- All module.json files
 
 ---
 
