@@ -1,14 +1,9 @@
-## 2024-05-23 - [CRITICAL] Private Key Injection in User Data
-**Vulnerability:** The infrastructure private key was being passed to the Jumphost's User Data and written to the filesystem. This exposed the key in the instance metadata (accessible to anyone on the instance) and on the disk.
-**Learning:** Never pass sensitive data like private keys into `user_data`. Instance metadata is not a secure storage mechanism for long-lived secrets.
-**Prevention:** Use SSH Agent Forwarding for accessing other instances from a bastion/jumphost. The private key should remain on the operator's machine.
+# Sentinel Journal
 
-## 2026-01-06 - [HIGH] Insecure Binary Download in Shell Scripts
-**Vulnerability:** The `dpdk-setup.sh` script attempted to download `sriov-cni` binary from GitHub Releases using the `latest` tag without checksum verification. This introduced supply chain risk (mutable tag) and broke when the project stopped publishing binaries.
-**Learning:** External dependencies in shell scripts must be pinned to specific versions and checksummed. Reliance on `latest` is fragile and insecure.
-**Prevention:** Pin container image versions in Kubernetes manifests (e.g., `sriov-cni:v2.8.0`) and use DaemonSets for installation instead of ad-hoc binary downloads in UserData.
-
-## 2026-01-06 - [HIGH] Unpinned Git Clone in Scripts
-**Vulnerability:** Shell scripts were cloning Git repositories (`git clone`) without checking out a specific commit or tag. This exposed the infrastructure to immediate breakage or compromise if the upstream repository changed.
-**Learning:** `git clone` pulls the default branch (usually main/master) which is mutable. Always pin to a specific immutable commit hash for reproducibility and security.
-**Prevention:** Immediately after `git clone`, enter the directory and run `git checkout <commit-hash>`. Do not rely on tags as they can be moved.
+## 2024-05-23 - Python Subprocess Command Injection
+**Vulnerability:** The `dpdk-devbind.py` script used `subprocess.run(shell=True)` with unvalidated user input, allowing for root-level command injection via CLI arguments.
+**Learning:** Even internal utility scripts can be attack vectors if they process external input (arguments, file contents) insecurely. `shell=True` is almost always a security smell.
+**Prevention:**
+1. Avoid `shell=True` in Python `subprocess` calls.
+2. Use native Python libraries (`os`, `shutil`) for file I/O instead of shelling out to `cat`, `echo`, `ls`.
+3. Validate all inputs against a strict allowlist (regex) before use.
