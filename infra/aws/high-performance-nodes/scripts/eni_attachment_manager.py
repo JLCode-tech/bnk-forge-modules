@@ -105,6 +105,43 @@ class ENIAttachmentManager:
         
         return 2  # fallback
     
+    def _wait_for_eni_status(self, eni_id: str, status: str, timeout: int = 20) -> bool:
+        """Poll ENI status until it matches desired status or timeout."""
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            try:
+                response = self.ec2_client.describe_network_interfaces(NetworkInterfaceIds=[eni_id])
+                if response['NetworkInterfaces']:
+                    current_status = response['NetworkInterfaces'][0]['Status']
+                    if current_status == status:
+                        return True
+            except Exception as e:
+                logger.warning(f"Error checking ENI status: {e}")
+
+            time.sleep(1)
+
+        logger.warning(f"Timeout waiting for ENI {eni_id} to become {status}")
+        return False
+
+    def _wait_for_interface_attached(self, device_index: int, timeout: int = 30) -> bool:
+        """Poll for interface presence in OS."""
+        expected_interface = f"eth{device_index}"
+        start_time = time.time()
+
+        while time.time() - start_time < timeout:
+            try:
+                result = subprocess.run(['ip', 'link', 'show'], capture_output=True, text=True)
+                if expected_interface in result.stdout:
+                    logger.info(f"Interface {expected_interface} appeared")
+                    return True
+            except Exception as e:
+                logger.warning(f"Error checking interface: {e}")
+
+            time.sleep(1)
+
+        logger.warning(f"Timeout waiting for interface {expected_interface}")
+        return False
+
     def _create_and_attach_eni(self, subnet_id: str) -> bool:
         """Create and attach external ENI to the instance."""
         try:
@@ -129,7 +166,9 @@ class ENIAttachmentManager:
             logger.info(f"Created ENI {eni_id}")
             
             # Wait for ENI to be available
-            time.sleep(10)
+            # Optimization: Poll for status instead of sleeping
+            if not self._wait_for_eni_status(eni_id, 'available'):
+                logger.warning(f"ENI {eni_id} did not become available, attempting attachment anyway")
             
             # Attach ENI
             device_index = self._get_next_device_index()
@@ -144,33 +183,15 @@ class ENIAttachmentManager:
             logger.info(f"Successfully attached external ENI {eni_id}")
             
             # Wait for attachment to complete
-            time.sleep(15)
-            
-            # Verify the interface is available
-            self._verify_interface(device_index)
+            # Optimization: Poll for interface presence instead of sleeping
+            if not self._wait_for_interface_attached(device_index):
+                logger.warning(f"Interface eth{device_index} did not appear in OS")
             
             return True
             
         except Exception as e:
             logger.error(f"Error creating/attaching external ENI: {e}")
             return False
-    
-    def _verify_interface(self, expected_device_index: int):
-        """Verify the new interface is available in the OS."""
-        try:
-            # Check if the interface appears in the system
-            result = subprocess.run(['ip', 'link', 'show'], capture_output=True, text=True)
-            logger.info(f"Network interfaces after ENI attachment:\n{result.stdout}")
-            
-            # The new interface should be eth{device_index}
-            expected_interface = f"eth{expected_device_index}"
-            if expected_interface in result.stdout:
-                logger.info(f"Successfully verified {expected_interface} is available")
-            else:
-                logger.warning(f"{expected_interface} not found in interface list")
-                
-        except Exception as e:
-            logger.error(f"Error verifying interface: {e}")
     
     def setup_additional_enis(self) -> bool:
         """Setup additional ENIs if they don't exist."""
