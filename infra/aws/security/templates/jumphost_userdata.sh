@@ -58,10 +58,13 @@ mv kubectl /usr/local/bin/
 
 # Install AWS CLI v2
 echo "Installing AWS CLI v2..."
-download_with_retry "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" "awscliv2.zip"
-unzip awscliv2.zip
+AWS_CLI_VERSION="2.33.5"
+AWS_CLI_ZIP="awscliv2.zip"
+download_with_retry "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-${AWS_CLI_VERSION}.zip" "$AWS_CLI_ZIP"
+echo "a1f6a25f1cadeb16a155519a09abd1784ddfbc58e9ffe4904e83d77fc2c6daa4  $AWS_CLI_ZIP" | sha256sum -c -
+unzip "$AWS_CLI_ZIP"
 ./aws/install
-rm -rf aws awscliv2.zip
+rm -rf aws "$AWS_CLI_ZIP"
 
 # Install Helm
 echo "Installing Helm..."
