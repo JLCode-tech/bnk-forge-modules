@@ -209,6 +209,7 @@ DPDK_SERVICE_EOF
     cat << CONTINUATION_SCRIPT > /usr/local/bin/dpdk-continuation.sh
 #!/bin/bash
 set -euo pipefail
+shopt -s extglob
 
 log() {
     echo "[\$(date '+%Y-%m-%d %H:%M:%S')] \$1" | tee -a /var/log/dpdk-continuation.log
@@ -222,7 +223,10 @@ WAIT_TIME=0
 INTERFACE_TARGET=3
 
 while [ \$WAIT_TIME -lt \$MAX_WAIT ]; do
-    INTERFACE_COUNT=\$(ls /sys/class/net/ | grep -E '^eth[0-9]+\$' | wc -l)
+    shopt -s nullglob
+    eth_interfaces=(/sys/class/net/eth+([0-9]))
+    INTERFACE_COUNT=\${#eth_interfaces[@]}
+    shopt -u nullglob
     log "Found \$INTERFACE_COUNT network interfaces (target: \$INTERFACE_TARGET)"
     
     if [ \$INTERFACE_COUNT -ge \$INTERFACE_TARGET ]; then
