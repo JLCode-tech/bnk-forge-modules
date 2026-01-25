@@ -12,16 +12,6 @@ def run_cmd(cmd):
     except Exception as e:
         return 1, "", str(e)
 
-def get_device_info(pci_addr):
-    """Get detailed device information"""
-    ret, out, err = run_cmd(f"lspci -s {pci_addr}")
-    if ret == 0 and out.strip():
-        # Parse: 00:06.0 Ethernet controller: Amazon.com, Inc. Elastic Network Adapter (ENA)
-        parts = out.strip().split(': ', 2)
-        if len(parts) >= 2:
-            return parts[1].strip()
-    return "Unknown device"
-
 def get_ena_devices():
     """Get list of ENA network devices"""
     ret, out, err = run_cmd("lspci -d 1d0f:")
@@ -30,21 +20,35 @@ def get_ena_devices():
         if line and 'Ethernet' in line:
             pci_addr = line.split()[0]
             full_addr = f"0000:{pci_addr}"
-            desc = get_device_info(pci_addr)
+
+            # Optimization: Parse description from existing output instead of spawning new process
+            parts = line.split(': ', 2)
+            desc = parts[1].strip() if len(parts) >= 2 else "Unknown device"
+
             devices.append({'addr': full_addr, 'desc': desc, 'short_addr': pci_addr})
     return devices
 
 def get_driver_info(pci_addr):
     """Get current driver and interface information"""
     # Get current driver
-    ret, out, err = run_cmd(f"readlink /sys/bus/pci/devices/{pci_addr}/driver 2>/dev/null")
-    driver = out.strip().split('/')[-1] if out.strip() else "none"
+    driver = "none"
+    try:
+        driver_path = os.readlink(f"/sys/bus/pci/devices/{pci_addr}/driver")
+        driver = os.path.basename(driver_path)
+    except OSError:
+        pass
     
     # Get interface name if available
     interface = ""
-    ret, out, err = run_cmd(f"ls /sys/bus/pci/devices/{pci_addr}/net/ 2>/dev/null")
-    if ret == 0 and out.strip():
-        interface = out.strip().split()[0]
+    try:
+        net_dir = f"/sys/bus/pci/devices/{pci_addr}/net/"
+        if os.path.exists(net_dir):
+            interfaces = os.listdir(net_dir)
+            if interfaces:
+                # Deterministic selection (first sorted)
+                interface = sorted(interfaces)[0]
+    except OSError:
+        pass
     
     # Check if interface is active
     active = False
