@@ -12,3 +12,8 @@
 **Vulnerability:** Shell scripts were cloning Git repositories (`git clone`) without checking out a specific commit or tag. This exposed the infrastructure to immediate breakage or compromise if the upstream repository changed.
 **Learning:** `git clone` pulls the default branch (usually main/master) which is mutable. Always pin to a specific immutable commit hash for reproducibility and security.
 **Prevention:** Immediately after `git clone`, enter the directory and run `git checkout <commit-hash>`. Do not rely on tags as they can be moved.
+
+## 2026-02-14 - [CRITICAL] Command Injection in Helper Scripts
+**Vulnerability:** `dpdk-devbind.py` used `subprocess.run(shell=True)` with unvalidated user input (`pci_addr` and `driver`). This allowed arbitrary command execution via crafted arguments (e.g., `; rm -rf /`).
+**Learning:** Helper scripts, even those intended for internal use, must treat arguments as untrusted. Python's `shell=True` is a dangerous default when combined with string interpolation.
+**Prevention:** Always use `shell=False` (the default) and pass arguments as a list. Validate all inputs against strict allowlists (e.g., regex for PCI addresses). Use native language features (like `open()` or `os` module) instead of shelling out to `echo`, `ls`, or `readlink`.

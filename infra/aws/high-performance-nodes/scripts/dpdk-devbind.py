@@ -3,18 +3,50 @@
 import subprocess
 import sys
 import os
+import re
 
 def run_cmd(cmd):
     """Run shell command and return output"""
     try:
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        # shell=False is the default, but we make it explicit.
+        # cmd must be a list of strings.
+        result = subprocess.run(cmd, shell=False, capture_output=True, text=True)
         return result.returncode, result.stdout, result.stderr
     except Exception as e:
         return 1, "", str(e)
 
+def write_to_file(path, content):
+    """Write content to file safely"""
+    try:
+        with open(path, 'w') as f:
+            f.write(content)
+            # Ensure newline if missing, like echo does
+            if not content.endswith('\n'):
+                f.write('\n')
+        return 0, "", ""
+    except Exception as e:
+        return 1, "", str(e)
+
+def validate_pci_address(pci_addr):
+    """Validate PCI address format"""
+    # Normalize short format 00:00.0 to 0000:00:00.0 if needed
+    if re.match(r'^[0-9a-fA-F]{2}:[0-9a-fA-F]{2}\.[0-9a-fA-F]$', pci_addr):
+        pci_addr = "0000:" + pci_addr
+
+    if not re.match(r'^[0-9a-fA-F]{4}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}\.[0-9a-fA-F]$', pci_addr):
+        raise ValueError(f"Invalid PCI address format: {pci_addr}")
+    return pci_addr
+
+def validate_driver_name(driver):
+    """Validate driver name"""
+    if not re.match(r'^[a-zA-Z0-9_-]+$', driver):
+        raise ValueError(f"Invalid driver name: {driver}")
+    return driver
+
 def get_device_info(pci_addr):
     """Get detailed device information"""
-    ret, out, err = run_cmd(f"lspci -s {pci_addr}")
+    # lspci -s supports domain:bus:slot.func
+    ret, out, err = run_cmd(["lspci", "-s", pci_addr])
     if ret == 0 and out.strip():
         # Parse: 00:06.0 Ethernet controller: Amazon.com, Inc. Elastic Network Adapter (ENA)
         parts = out.strip().split(': ', 2)
@@ -24,7 +56,7 @@ def get_device_info(pci_addr):
 
 def get_ena_devices():
     """Get list of ENA network devices"""
-    ret, out, err = run_cmd("lspci -d 1d0f:")
+    ret, out, err = run_cmd(["lspci", "-d", "1d0f:"])
     devices = []
     for line in out.strip().split('\n'):
         if line and 'Ethernet' in line:
@@ -37,25 +69,42 @@ def get_ena_devices():
 def get_driver_info(pci_addr):
     """Get current driver and interface information"""
     # Get current driver
-    ret, out, err = run_cmd(f"readlink /sys/bus/pci/devices/{pci_addr}/driver 2>/dev/null")
-    driver = out.strip().split('/')[-1] if out.strip() else "none"
+    try:
+        driver_path = os.readlink(f"/sys/bus/pci/devices/{pci_addr}/driver")
+        driver = os.path.basename(driver_path)
+    except OSError:
+        driver = "none"
     
     # Get interface name if available
     interface = ""
-    ret, out, err = run_cmd(f"ls /sys/bus/pci/devices/{pci_addr}/net/ 2>/dev/null")
-    if ret == 0 and out.strip():
-        interface = out.strip().split()[0]
+    try:
+        net_dir = f"/sys/bus/pci/devices/{pci_addr}/net/"
+        if os.path.exists(net_dir):
+            interfaces = sorted(os.listdir(net_dir))
+            if interfaces:
+                interface = interfaces[0]
+    except OSError:
+        pass
     
     # Check if interface is active
     active = False
     if interface:
-        ret, out, err = run_cmd(f"ip link show {interface} 2>/dev/null | grep 'state UP'")
-        active = ret == 0
+        # We can check /sys/class/net/<iface>/operstate
+        try:
+            with open(f"/sys/class/net/{interface}/operstate", "r") as f:
+                state = f.read().strip()
+                if state == "up":
+                    active = True
+        except OSError:
+            pass
     
     return driver, interface, active
 
 def bind_device(pci_addr, driver):
     """Bind PCI device to specified driver using driver_override method"""
+    pci_addr = validate_pci_address(pci_addr)
+    driver = validate_driver_name(driver)
+
     print(f"Binding {pci_addr} to {driver}")
     
     # Get current driver
@@ -68,13 +117,13 @@ def bind_device(pci_addr, driver):
     # Step 1: Unbind from current driver if bound
     if current_driver != "none":
         print(f"  Unbinding from {current_driver}")
-        ret, out, err = run_cmd(f"echo {pci_addr} > /sys/bus/pci/devices/{pci_addr}/driver/unbind")
+        ret, out, err = write_to_file(f"/sys/bus/pci/devices/{pci_addr}/driver/unbind", pci_addr)
         if ret != 0:
             print(f"  Warning: Failed to unbind from {current_driver}: {err}")
     
     # Step 2: Set driver override
     print(f"  Setting driver override to {driver}")
-    ret, out, err = run_cmd(f"echo {driver} > /sys/bus/pci/devices/{pci_addr}/driver_override")
+    ret, out, err = write_to_file(f"/sys/bus/pci/devices/{pci_addr}/driver_override", driver)
     if ret != 0:
         print(f"  Error: Failed to set driver override: {err}")
         return False
@@ -82,22 +131,37 @@ def bind_device(pci_addr, driver):
     # Step 3: For vfio-pci, ensure module is loaded and device ID is added
     if driver == "vfio-pci":
         print("  Loading vfio-pci module")
-        run_cmd("modprobe vfio-pci")
+        run_cmd(["modprobe", "vfio-pci"])
         
         print("  Adding ENA device ID to vfio-pci")
-        ret, out, err = run_cmd("echo '1d0f ec20' > /sys/bus/pci/drivers/vfio-pci/new_id")
+        # For writing to new_id, we need to be careful. It expects "vendor device [subvendor subdevice class class_mask]"
+        # Here we just write "1d0f ec20"
+        ret, out, err = write_to_file("/sys/bus/pci/drivers/vfio-pci/new_id", "1d0f ec20")
         if ret != 0:
-            print(f"  Warning: Failed to add device ID: {err}")
+            # It might fail if ID already exists, which is fine usually
+            print(f"  Warning: Failed to add device ID (might already exist): {err}")
         
         # Enable unsafe NOIOMMU mode if IOMMU groups are empty
-        ret, out, err = run_cmd("ls /sys/kernel/iommu_groups/ | wc -l")
-        if ret == 0 and int(out.strip()) <= 2:  # Only . and .. directories
+        # Logic: check if /sys/kernel/iommu_groups exists and has entries
+        iommu_groups_path = "/sys/kernel/iommu_groups/"
+        enable_unsafe = False
+        if not os.path.exists(iommu_groups_path):
+             enable_unsafe = True
+        else:
+            try:
+                groups = os.listdir(iommu_groups_path)
+                if len(groups) == 0:
+                    enable_unsafe = True
+            except OSError:
+                pass # permission denied or other
+
+        if enable_unsafe:
             print("  Enabling unsafe NOIOMMU mode (no IOMMU detected)")
-            run_cmd("echo 1 > /sys/module/vfio/parameters/enable_unsafe_noiommu_mode")
+            write_to_file("/sys/module/vfio/parameters/enable_unsafe_noiommu_mode", "1")
     
     # Step 4: Probe the device to bind it
     print(f"  Probing device to bind to {driver}")
-    ret, out, err = run_cmd(f"echo {pci_addr} > /sys/bus/pci/drivers_probe")
+    ret, out, err = write_to_file("/sys/bus/pci/drivers_probe", pci_addr)
     if ret != 0:
         print(f"  Error: Failed to probe device: {err}")
         return False
@@ -160,8 +224,12 @@ if __name__ == "__main__":
             print("Usage: dpdk-devbind.py --bind <driver> <pci_addr>")
             print("   or: dpdk-devbind.py -b <driver> <pci_addr>")
             sys.exit(1)
-        success = bind_device(sys.argv[3], sys.argv[2])
-        if not success:
+        try:
+            success = bind_device(sys.argv[3], sys.argv[2])
+            if not success:
+                sys.exit(1)
+        except ValueError as e:
+            print(f"Error: {e}")
             sys.exit(1)
     elif sys.argv[1] == "--help" or sys.argv[1] == "-h":
         print("Usage:")
