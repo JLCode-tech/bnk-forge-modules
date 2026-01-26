@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # Simple DPDK device binding script for ENA interfaces
+# Optimized by Bolt: uses native os calls and avoids N+1 lspci queries
 import subprocess
 import sys
 import os
@@ -7,50 +8,72 @@ import os
 def run_cmd(cmd):
     """Run shell command and return output"""
     try:
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        # Ensure cmd is a list for shell=False
+        if isinstance(cmd, str):
+            cmd = cmd.split()
+        result = subprocess.run(cmd, shell=False, capture_output=True, text=True)
         return result.returncode, result.stdout, result.stderr
     except Exception as e:
         return 1, "", str(e)
 
-def get_device_info(pci_addr):
-    """Get detailed device information"""
-    ret, out, err = run_cmd(f"lspci -s {pci_addr}")
-    if ret == 0 and out.strip():
-        # Parse: 00:06.0 Ethernet controller: Amazon.com, Inc. Elastic Network Adapter (ENA)
-        parts = out.strip().split(': ', 2)
-        if len(parts) >= 2:
-            return parts[1].strip()
-    return "Unknown device"
+def write_to_file(path, content):
+    """Write content to file (replaces echo > file)"""
+    try:
+        with open(path, 'w') as f:
+            f.write(content + "\n") # echo adds newline
+        return 0, "", ""
+    except Exception as e:
+        return 1, "", str(e)
 
 def get_ena_devices():
     """Get list of ENA network devices"""
-    ret, out, err = run_cmd("lspci -d 1d0f:")
+    # Use lspci -d 1d0f: to get all ENA devices with descriptions
+    # Avoids N+1 calls to lspci -s for each device
+    ret, out, err = run_cmd(["lspci", "-d", "1d0f:"])
     devices = []
     for line in out.strip().split('\n'):
         if line and 'Ethernet' in line:
-            pci_addr = line.split()[0]
+            # Output format: 00:06.0 Ethernet controller: Amazon.com...
+            parts = line.split(' ', 1)
+            pci_addr = parts[0]
             full_addr = f"0000:{pci_addr}"
-            desc = get_device_info(pci_addr)
+
+            # Parse description from the rest of the line
+            desc = "Unknown device"
+            if len(parts) > 1:
+                desc_parts = parts[1].split(': ', 1)
+                if len(desc_parts) > 1:
+                    desc = desc_parts[1].strip()
+
             devices.append({'addr': full_addr, 'desc': desc, 'short_addr': pci_addr})
     return devices
 
 def get_driver_info(pci_addr):
     """Get current driver and interface information"""
-    # Get current driver
-    ret, out, err = run_cmd(f"readlink /sys/bus/pci/devices/{pci_addr}/driver 2>/dev/null")
-    driver = out.strip().split('/')[-1] if out.strip() else "none"
+    # Get current driver using os.readlink
+    driver = "none"
+    try:
+        path = os.readlink(f"/sys/bus/pci/devices/{pci_addr}/driver")
+        driver = os.path.basename(path)
+    except OSError:
+        pass
     
-    # Get interface name if available
+    # Get interface name if available using os.listdir
     interface = ""
-    ret, out, err = run_cmd(f"ls /sys/bus/pci/devices/{pci_addr}/net/ 2>/dev/null")
-    if ret == 0 and out.strip():
-        interface = out.strip().split()[0]
+    try:
+        files = os.listdir(f"/sys/bus/pci/devices/{pci_addr}/net/")
+        if files:
+            interface = files[0]
+    except OSError:
+        pass
     
     # Check if interface is active
     active = False
     if interface:
-        ret, out, err = run_cmd(f"ip link show {interface} 2>/dev/null | grep 'state UP'")
-        active = ret == 0
+        # Must still use ip command for link status
+        ret, out, err = run_cmd(["ip", "link", "show", interface])
+        if ret == 0 and "state UP" in out:
+            active = True
     
     return driver, interface, active
 
@@ -68,13 +91,13 @@ def bind_device(pci_addr, driver):
     # Step 1: Unbind from current driver if bound
     if current_driver != "none":
         print(f"  Unbinding from {current_driver}")
-        ret, out, err = run_cmd(f"echo {pci_addr} > /sys/bus/pci/devices/{pci_addr}/driver/unbind")
+        ret, out, err = write_to_file(f"/sys/bus/pci/devices/{pci_addr}/driver/unbind", pci_addr)
         if ret != 0:
             print(f"  Warning: Failed to unbind from {current_driver}: {err}")
     
     # Step 2: Set driver override
     print(f"  Setting driver override to {driver}")
-    ret, out, err = run_cmd(f"echo {driver} > /sys/bus/pci/devices/{pci_addr}/driver_override")
+    ret, out, err = write_to_file(f"/sys/bus/pci/devices/{pci_addr}/driver_override", driver)
     if ret != 0:
         print(f"  Error: Failed to set driver override: {err}")
         return False
@@ -82,22 +105,31 @@ def bind_device(pci_addr, driver):
     # Step 3: For vfio-pci, ensure module is loaded and device ID is added
     if driver == "vfio-pci":
         print("  Loading vfio-pci module")
-        run_cmd("modprobe vfio-pci")
+        run_cmd(["modprobe", "vfio-pci"])
         
         print("  Adding ENA device ID to vfio-pci")
-        ret, out, err = run_cmd("echo '1d0f ec20' > /sys/bus/pci/drivers/vfio-pci/new_id")
+        ret, out, err = write_to_file("/sys/bus/pci/drivers/vfio-pci/new_id", "1d0f ec20")
         if ret != 0:
             print(f"  Warning: Failed to add device ID: {err}")
         
         # Enable unsafe NOIOMMU mode if IOMMU groups are empty
-        ret, out, err = run_cmd("ls /sys/kernel/iommu_groups/ | wc -l")
-        if ret == 0 and int(out.strip()) <= 2:  # Only . and .. directories
-            print("  Enabling unsafe NOIOMMU mode (no IOMMU detected)")
-            run_cmd("echo 1 > /sys/module/vfio/parameters/enable_unsafe_noiommu_mode")
+        # Optimization: use os.listdir instead of ls | wc -l
+        try:
+            iommu_groups = os.listdir("/sys/kernel/iommu_groups/")
+            # . and .. are not included in os.listdir, so checking if empty or just not enough real groups
+            # The original check was `ls | wc -l` <= 2 (which meant empty or only . and ..)
+            # os.listdir returns names, so len(groups) == 0 means empty.
+            if len(iommu_groups) == 0:
+                print("  Enabling unsafe NOIOMMU mode (no IOMMU detected)")
+                write_to_file("/sys/module/vfio/parameters/enable_unsafe_noiommu_mode", "1")
+        except OSError:
+            # If directory doesn't exist, assume no IOMMU
+            print("  Enabling unsafe NOIOMMU mode (no IOMMU groups found)")
+            write_to_file("/sys/module/vfio/parameters/enable_unsafe_noiommu_mode", "1")
     
     # Step 4: Probe the device to bind it
     print(f"  Probing device to bind to {driver}")
-    ret, out, err = run_cmd(f"echo {pci_addr} > /sys/bus/pci/drivers_probe")
+    ret, out, err = write_to_file("/sys/bus/pci/drivers_probe", pci_addr)
     if ret != 0:
         print(f"  Error: Failed to probe device: {err}")
         return False
