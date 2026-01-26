@@ -66,24 +66,17 @@ log "Essential packages installed successfully"
 log "Cloning Amazon drivers repository"
 cd /opt
 git clone https://github.com/amzn/amzn-drivers.git
-cd /
+cd amzn-drivers
+# Sentinel: Pin to specific commit to prevent supply chain attacks (2024-05-23)
+git checkout 46e50d6265ef6669877610549205973955748039
+cd ..
 
-# Download and prepare VFIO patches for write-combining support
+# Run VFIO patch script from cloned repo (avoids redundant downloads)
 log "Setting up VFIO with write-combining patches"
-wget https://raw.githubusercontent.com/amzn/amzn-drivers/master/userspace/dpdk/enav2-vfio-patch/get-vfio-with-wc.sh -O /tmp/get-vfio-with-wc.sh
-chmod +x /tmp/get-vfio-with-wc.sh
-
-# Create patches directory
-mkdir -p /tmp/patches
-cd /tmp/patches
-
-# Download VFIO patches for different kernel versions
-wget https://raw.githubusercontent.com/amzn/amzn-drivers/master/userspace/dpdk/enav2-vfio-patch/patches/linux-4.10-vfio-wc.patch
-wget https://raw.githubusercontent.com/amzn/amzn-drivers/master/userspace/dpdk/enav2-vfio-patch/patches/linux-5.8-vfio-wc.patch
-wget https://raw.githubusercontent.com/amzn/amzn-drivers/master/userspace/dpdk/enav2-vfio-patch/patches/linux-5.15-vfio-wc.patch
-
-cd /tmp
+cd /opt/amzn-drivers/userspace/dpdk/enav2-vfio-patch/
+chmod +x get-vfio-with-wc.sh
 ./get-vfio-with-wc.sh
+cd /
 
 # Create DPDK directory structure
 log "Setting up DPDK directory structure"
