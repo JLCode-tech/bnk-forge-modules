@@ -1,170 +1,138 @@
-# BNK-Forge Official Module Library
+# BNK-Forge Module Library
 
-![Version](https://img.shields.io/badge/Version-2.2--rev.25-blue)
-![Branch](https://img.shields.io/badge/Branch-release/2.2-green)
-![F5 BNK](https://img.shields.io/badge/F5_BNK-2.2_GA-orange)
-![Status](https://img.shields.io/badge/Status-Tested-brightgreen)
+Curated OpenTofu / Terraform modules for deploying [F5 BIG-IP Next for Kubernetes (BNK)](https://clouddocs.f5.com/bigip-next-for-kubernetes/) — infrastructure, Kubernetes prerequisites, BNK platform components, and demo applications.
 
-This repository contains the official BNK-Forge module library - a curated collection of OpenTofu/Terraform modules for deploying infrastructure, Kubernetes prerequisites, and BIG-IP Next for Kubernetes (BNK) components.
-
-**Last Tested:** 2026-02-10 (full 14-module stack deployed on aws-sydney-bnk-demo-cluster)
-
-> **IMPORTANT:** Always use the `release/2.2` branch for production deployments. `main` mirrors the latest stable release.
-
-## Version Compatibility
-
-| Module Branch | bnk-forge-v2 | F5 BNK Version | Status |
-|---------------|--------------|----------------|--------|
-| **release/2.2** | 2.6.x | 2.2 GA | **Current - Tested** |
-| main | Mirrors latest stable | N/A | Snapshot of release/2.2 |
-
-### Configuring BNK-Forge to Use This Library
-
-In BNK-Forge v2, go to **Settings > Defaults** and set:
-
-```
-Module Library Git URL: https://github.com/JLCode-tech/bnk-forge-modules.git
-Module Library Git Ref: release/2.2
-```
-
-Then sync the catalog at **Settings > Environment Config > Sync Modules**.
-
-## Overview
-
-This is a **read-only reference library** that is synced into the BNK-Forge tool. Users select modules from this catalog through the BNK-Forge UI.
-
-## Repository Structure
-
-```
-bnk-forge-modules/
-├── infra/                    # Infrastructure modules
-│   └── aws/
-│       ├── vpc/              # AWS VPC with public/private subnets
-│       ├── eks/              # Amazon EKS cluster
-│       ├── security/         # Security groups, IAM, jumphost
-│       ├── storage/          # EBS gp3, EFS, volume snapshots
-│       └── high-performance-nodes/  # SR-IOV, DPDK, hugepages, Multus
-├── k8s/                      # Kubernetes prerequisite modules
-│   ├── bnk-prerequisites/    # Namespaces, FAR secrets, manifest parsing
-│   ├── cert-manager/         # F5 cert-manager (TLS certificates)
-│   └── network-setup/        # Multus CNI network attachment definitions
-├── bnk/                      # BIG-IP Next for Kubernetes modules
-│   ├── flo/                  # F5 Lifecycle Operator (core operator)
-│   ├── cneinstance/          # CNEInstance CR (triggers FLO component deployment)
-│   ├── bnk-vlans/            # F5SPKVlan CRs (TMM data-plane IPs + AWS ENI)
-│   ├── bnk-gatewayclass/     # Standard GatewayClass (gateway.networking.k8s.io/v1)
-│   ├── bnk-gateway-ext/      # F5BnkGateway CR (IPAM integration)
-│   ├── gateway/              # Gateway API Gateway instances
-│   ├── routes/               # HTTPRoute, GRPCRoute, L4Route
-│   ├── bnk-netpolicy/        # BNKNetPolicy (TCP profiles, iRules, logging)
-│   ├── bnk-secpolicy/        # BNKSecPolicy (firewall, DDoS, ACL)
-│   └── far-setup/            # FAR image pull secrets (legacy — use bnk-prerequisites)
-├── app/                      # Demo application modules
-│   ├── demo-namespace/       # Demo namespace setup
-│   ├── demo-apps/            # Backend demo applications
-│   ├── demo-gateway/         # Demo Gateway instance
-│   ├── demo-routes/          # Demo HTTPRoute configuration
-│   ├── demo-security/        # Demo security policies
-│   ├── demo-irules/          # Demo iRules
-│   ├── demo-ai-proxy/        # LiteLLM Bedrock proxy
-│   ├── demo-ai-analyzer/     # F5BigAnalyzer for AI Intelligent LB
-│   ├── demo-observability/   # Fluent Bit + Loki logging
-│   ├── demo-traffic/         # In-cluster traffic generator
-│   └── demo-ec2-traffic/     # EC2-based external traffic source
-└── templates/                # Module templates
-```
-
-## BNK Deployment Flow (v2.2)
-
-### 1. Infrastructure (AWS)
-| Order | Module | Purpose |
-|-------|--------|---------|
-| 1 | `infra/aws/vpc` | VPC, subnets, NAT gateway |
-| 2 | `infra/aws/security` | Security groups, IAM, jumphost |
-| 3 | `infra/aws/eks` | EKS cluster and node groups |
-| 4 | `infra/aws/storage` | EBS gp3 storage class, EFS |
-| 5 | `infra/aws/high-performance-nodes` | SR-IOV, DPDK, hugepages, TMM node pool |
-
-### 2. Kubernetes Prerequisites
-| Order | Module | Purpose |
-|-------|--------|---------|
-| 6 | `k8s/bnk-prerequisites` | Namespaces, FAR secrets, manifest download |
-| 7 | `k8s/cert-manager` | TLS certificate management (ClusterIssuer) |
-| 8 | `k8s/network-setup` | Multus CNI network attachment definitions |
-
-### 3. BNK Platform
-| Order | Module | Purpose |
-|-------|--------|---------|
-| 9 | `bnk/flo` | F5 Lifecycle Operator (Helm) |
-| 10 | `bnk/cneinstance` | CNEInstance CR — triggers FLO to deploy all BNK components |
-| 11 | `bnk/bnk-vlans` | F5SPKVlan CRs — TMM data-plane IP configuration |
-
-### 4. Gateway API
-| Order | Module | Purpose |
-|-------|--------|---------|
-| 12 | `bnk/bnk-gatewayclass` | Standard GatewayClass |
-| 13 | `bnk/gateway` | Gateway instances (listeners, TLS, policies) |
-| 14 | `bnk/routes` | HTTPRoute, GRPCRoute, L4Route |
-
-### FLO Auto-Deploys
-When CNEInstance + GatewayClass are applied, FLO automatically deploys:
-- CWC (Cluster-Wide Controller)
-- DSSM (Distributed Session State Manager)
-- TMM (Traffic Management Microkernel)
-- F5 Ingress, Fluentd, Observer, OTEL, RabbitMQ
-- All CRDs
-
-## Module Categories
-
-### Infrastructure (infra)
-Cloud infrastructure components - networks, compute, storage
-- **Workflow Compatibility**: Greenfield only
-- **Providers**: AWS (Azure, GCP planned)
-
-### Kubernetes (k8s)
-Kubernetes cluster prerequisites and add-ons
-- **Workflow Compatibility**: Greenfield, Partial
-- **Providers**: Cloud-agnostic
-
-### BNK Applications (bnk)
-BIG-IP Next for Kubernetes components
-- **Workflow Compatibility**: Greenfield, Partial, Minimal
-- **Providers**: Cloud-agnostic (requires Kubernetes)
-
-### Demo Applications (app)
-Reference demo stack with GenAI architecture
-- **Workflow Compatibility**: Greenfield
-- **Providers**: AWS (Bedrock integration)
-
-## Module Standards
-
-Each module includes:
-- `main.tf` - Resources
-- `variables.tf` - Input variables with validation
-- `outputs.tf` - Output values with descriptions
-- `versions.tf` - Provider requirements
-- `module.json` - BNK-Forge metadata for auto-wiring
-- `README.md` - Documentation
-
-## Usage
-
-**Do not clone or modify this repository directly.**
-
-Users interact through BNK-Forge UI:
-1. Select modules from the catalog
-2. Configure variables
-3. Deploy
-
-## Reference Documentation
-
-- [F5 Lifecycle Operator](https://clouddocs.f5.com/bigip-next-for-kubernetes/latest/bnk-f5-lifecycle-operator.html)
-- [BIG-IP Next for Kubernetes CRDs](https://clouddocs.f5.com/bigip-next-for-kubernetes/latest/spk-custom-resources.html)
-- [Gateway API](https://gateway-api.sigs.k8s.io/)
-
-## Related Repositories
-
-- **bnk-forge-v2**: Main BNK-Forge application
+> ## ⚠️ This branch (`main`) is intentionally empty
+>
+> `main` is a **landing page** — it points to the active release branches. **All real module code lives on `release/X.Y` branches.**
+>
+> Pick the release branch that matches the F5 BNK version you want to deploy.
 
 ---
 
-For more information, see the [BNK-Forge Documentation](https://github.com/JLCode-tech/bnk-forge-v2)
+## Active release branches
+
+| Branch | F5 BNK version | Status | Use this if you... |
+|---|---|---|---|
+| **[`release/2.2`](https://github.com/JLCode-tech/bnk-forge-modules/tree/release/2.2)** | BNK 2.2 GA | **Active — current stable** | Are deploying BNK today |
+| `release/2.3` | BNK 2.3 (when GA) | Not yet open | Want the next release |
+
+History of past releases lives in their respective `release/X.Y` branches (never deleted).
+
+---
+
+## Quick start
+
+Clone the **release branch** that matches your target BNK version, not `main`:
+
+```bash
+# Latest stable
+git clone -b release/2.2 https://github.com/JLCode-tech/bnk-forge-modules.git
+
+cd bnk-forge-modules
+cat VERSION   # see the rev you're at (e.g. 2.2-rev.27)
+```
+
+Once cloned, see the release branch's own `README.md` and `DEPENDENCY_GRAPH.md` for the module catalog and deployment order.
+
+---
+
+## Repository conventions
+
+### Branch model
+
+- **`main`** — this landing page only. No code. Auto-tracks the latest stable `release/X.Y` for documentation purposes.
+- **`release/X.Y`** — protected, PR-only. One per BNK release. Receives bug fixes and minor enhancements that maintain compatibility with that BNK version.
+- **`feature/X.Y-foo`** — topic branches. Open against the targeted `release/X.Y`; deleted after merge.
+
+### Cross-release fixes
+
+A fix that applies to multiple BNK versions is cherry-picked from one `release/X.Y` to another via PR. Never direct-pushed.
+
+### Branch protection
+
+Both `main` and `release/*` branches are protected:
+- PR required (no direct push)
+- Squash or rebase merge only (linear history)
+- No force-pushes, no branch deletion
+- All conversations resolved before merge
+
+CI status checks will be added as the validation harness comes online.
+
+---
+
+## What's where on a release branch
+
+Each `release/X.Y` branch contains the full module catalog:
+
+```
+infra/                      Cloud-specific infrastructure modules
+  ├── aws/                  EKS, VPC, security, high-performance nodes, IRSA, ...
+  ├── gcp/                  (release/2.3+)
+  ├── azure/                (release/2.3+)
+  ├── ocp/                  OpenShift on-prem
+  ├── ubuntu/               Bare-metal Ubuntu
+  └── k8s/                  Generic K8s helpers
+
+k8s/                        Cloud-AGNOSTIC Kubernetes plumbing
+  ├── bnk-prerequisites/    Namespaces (f5-bnk, f5-utils)
+  ├── cert-manager/         Helm install
+  ├── network-setup/        NetworkAttachmentDefinitions for TMM
+  └── ...
+
+bnk/                        Cloud-AGNOSTIC BNK platform CRs
+  ├── flo/                  F5 Lifecycle Operator
+  ├── cneinstance/          CNEInstance CR (FLO deploys TMM, CNE controller, etc.)
+  ├── bnk-vlans/            F5SPKVlan CRs
+  ├── gateway/              Gateway API resources
+  └── ...
+
+app/                        Demo + reference applications
+  ├── demo-*                Cloud-agnostic demo apps
+  └── bedrock-smartllm-*    AWS-specific (Bedrock) — declared via module.json
+```
+
+### Architecture rules
+
+- **`infra/{cloud}/`** is cloud-specific by design.
+- **`k8s/`** and **`bnk/`** must be cloud-agnostic — no `aws`/`google`/`azurerm` providers in their `versions.tf`.
+- **`app/`** may be cloud-coupled but must declare it via `module.json` (`cloud_specific`, `supported_platforms`).
+
+A CI gate enforces these rules on every PR.
+
+---
+
+## Reference docs
+
+On each release branch:
+
+- **`README.md`** — module catalog, version compatibility matrix, deployment overview
+- **`DEPENDENCY_GRAPH.md`** — module dependency map and deployment order
+- **`MODULE_METADATA_SCHEMA.md`** — `module.json` contract for cataloging
+- **`VERSION`** — the release branch's revision (e.g. `2.2-rev.27`)
+- **`docs/plans/`** — multi-step refactor planning docs (when active work is in flight)
+- **Per-module `README.md`** + `CHANGELOG.md` + `bnkforge.pack.json` + `module.json`
+
+---
+
+## Related
+
+- **F5 BIG-IP Next for Kubernetes** — official docs: <https://clouddocs.f5.com/bigip-next-for-kubernetes/>
+- **`bnk-forge-v2`** (private) — the BNK-Forge control plane app that consumes this module library to render and apply Terraform stacks
+- **F5 BNK Multi-AZ Network Architecture Deployment Guide** (Doc 3) — primary reference for AWS kernel-mode TMM deployments
+
+---
+
+## Contributing
+
+1. Open an issue describing the change against a target `release/X.Y` branch
+2. Branch as `feature/X.Y-<short-name>` from `release/X.Y`
+3. Open PR back to that `release/X.Y`
+4. PR must squash-merge or rebase-merge (no merge commits)
+5. Bump `VERSION` (`X.Y-rev.N` → `X.Y-rev.N+1`) in the same PR
+
+For cross-release backports / forwardports: cherry-pick the merge commit and open a separate PR per target branch.
+
+---
+
+*This README is the only file maintained on `main`. To work with modules, switch to a `release/X.Y` branch.*
