@@ -134,6 +134,26 @@ resource "null_resource" "vlans" {
         exit 1
       fi
 
+      kubeconfig="${local_file.kubeconfig.filename}"
+      namespace="${var.namespace}"
+      echo "Waiting for F5 validation webhook..."
+      WEBHOOK_TIMEOUT=150
+      WEBHOOK_ELAPSED=0
+      while [ $WEBHOOK_ELAPSED -lt $WEBHOOK_TIMEOUT ]; do
+        ENDPOINT_IP=$(kubectl --kubeconfig $${kubeconfig} get endpoints f5-validation-svc \
+          -n $${namespace} -o jsonpath='{.subsets[0].addresses[0].ip}' 2>/dev/null)
+        if [ -n "$ENDPOINT_IP" ]; then
+          echo "F5 validation webhook ready (endpoint: $ENDPOINT_IP)"
+          break
+        fi
+        echo "  Waiting for f5-validation-svc endpoint ($${WEBHOOK_ELAPSED}s)..."
+        sleep 5
+        WEBHOOK_ELAPSED=$((WEBHOOK_ELAPSED + 5))
+      done
+      if [ $WEBHOOK_ELAPSED -ge $WEBHOOK_TIMEOUT ]; then
+        echo "WARNING: F5 validation webhook not ready after $${WEBHOOK_TIMEOUT}s — apply may fail"
+      fi
+
       ${local.kubectl} apply -f ${local_file.vlan_manifests.filename} 2>&1
 
       if [ $? -ne 0 ]; then
