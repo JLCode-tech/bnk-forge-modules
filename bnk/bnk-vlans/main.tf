@@ -154,11 +154,22 @@ resource "null_resource" "vlans" {
         echo "WARNING: F5 validation webhook not ready after $${WEBHOOK_TIMEOUT}s — apply may fail"
       fi
 
+      # Endpoint registered but port may still be starting TLS — add grace period + retry
+      sleep 15
       ${local.kubectl} apply -f ${local_file.vlan_manifests.filename} 2>&1
-
       if [ $? -ne 0 ]; then
-        echo "ERROR: Failed to apply VLAN manifests"
-        exit 1
+        echo "First apply failed — webhook may still be starting. Retrying in 30s..."
+        sleep 30
+        ${local.kubectl} apply -f ${local_file.vlan_manifests.filename} 2>&1
+        if [ $? -ne 0 ]; then
+          echo "Second attempt failed — retrying one more time in 30s..."
+          sleep 30
+          ${local.kubectl} apply -f ${local_file.vlan_manifests.filename} 2>&1
+          if [ $? -ne 0 ]; then
+            echo "ERROR: Failed to apply VLAN manifests after 3 attempts"
+            exit 1
+          fi
+        fi
       fi
 
       echo ""
