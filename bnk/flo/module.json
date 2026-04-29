@@ -41,8 +41,8 @@
         "description": "Namespace for FLO deployment",
         "source": "module",
         "from_module": "k8s/bnk-prerequisites",
-        "from_output": "operator_namespace",
-        "default": "f5-operator"
+        "from_output": "cne_core_namespace",
+        "default": "f5-cne-core"
       },
       {
         "name": "flo_version",

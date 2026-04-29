@@ -36,31 +36,24 @@
     ],
     "optional": [
       {
-        "name": "operator_namespace",
+        "name": "cne_core_namespace",
         "type": "string",
-        "description": "Namespace for FLO and all BNK components",
-        "default": "f5-operator",
+        "description": "Namespace for FLO operator and CNE core components (CWC, IPAM, RabbitMQ, Observer, OTEL)",
+        "default": "f5-cne-core",
         "source": "user"
       },
       {
-        "name": "utils_namespace",
+        "name": "cne_instance_namespace",
         "type": "string",
-        "description": "Namespace for utility components",
-        "default": "f5-utils",
-        "source": "user"
-      },
-      {
-        "name": "gateway_namespace",
-        "type": "string",
-        "description": "Namespace for Gateway API resources",
-        "default": "gateway-ns",
+        "description": "Namespace for CNEInstance workloads (TMM, CNE controller, VLANs, NADs)",
+        "default": "f5-bnk",
         "source": "user"
       },
       {
         "name": "bnk_manifest_version",
         "type": "string",
         "description": "BNK manifest version to download from FAR",
-        "default": "2.2.0-3.2226.0-0.0.385",
+        "default": "2.2.1-3.2226.0-0.0.511",
         "source": "user"
       },
       {
@@ -75,24 +68,17 @@
   "outputs": {
     "key_outputs": [
       {
-        "name": "operator_namespace",
+        "name": "cne_core_namespace",
         "type": "string",
-        "description": "Operator namespace name (FLO + all BNK components)",
-        "used_by": ["k8s/network-setup", "k8s/cert-manager", "bnk/flo", "bnk/cneinstance"],
+        "description": "CNE core namespace (FLO, CWC, IPAM, Observer)",
+        "used_by": ["bnk/flo", "k8s/cert-manager"],
         "sensitive": false
       },
       {
-        "name": "utils_namespace",
+        "name": "cne_instance_namespace",
         "type": "string",
-        "description": "Utilities namespace name",
-        "used_by": [],
-        "sensitive": false
-      },
-      {
-        "name": "gateway_namespace",
-        "type": "string",
-        "description": "Gateway namespace name",
-        "used_by": ["bnk/gateway", "bnk/routes"],
+        "description": "CNE instance namespace (TMM, VLANs, NADs, controller)",
+        "used_by": ["k8s/network-setup", "bnk/cneinstance", "bnk/bnk-vlans"],
         "sensitive": false
       },
       {

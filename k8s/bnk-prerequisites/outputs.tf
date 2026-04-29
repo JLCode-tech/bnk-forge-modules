@@ -5,19 +5,14 @@
 # NAMESPACE OUTPUTS
 # =============================================================================
 
-output "operator_namespace" {
-  description = "Name of the operator namespace (FLO + all BNK components)"
-  value       = kubernetes_namespace_v1.operator.metadata[0].name
+output "cne_core_namespace" {
+  description = "CNE core namespace (FLO, CWC, IPAM, Observer)"
+  value       = kubernetes_namespace_v1.cne_core.metadata[0].name
 }
 
-output "utils_namespace" {
-  description = "Name of the utilities namespace"
-  value       = kubernetes_namespace_v1.utils.metadata[0].name
-}
-
-output "gateway_namespace" {
-  description = "Name of the gateway namespace"
-  value       = kubernetes_namespace_v1.gateway.metadata[0].name
+output "cne_instance_namespace" {
+  description = "CNE instance namespace (TMM, VLANs, NADs, controller)"
+  value       = kubernetes_namespace_v1.cne_instance.metadata[0].name
 }
 
 # =============================================================================
@@ -62,12 +57,10 @@ output "prerequisites_ready" {
   value       = true
 
   depends_on = [
-    kubernetes_namespace_v1.operator,
-    kubernetes_namespace_v1.utils,
-    kubernetes_namespace_v1.gateway,
-    kubernetes_secret_v1.far_secret_operator,
-    kubernetes_secret_v1.far_secret_utils,
-    kubernetes_secret_v1.far_secret_gateway,
+    kubernetes_namespace_v1.cne_core,
+    kubernetes_namespace_v1.cne_instance,
+    kubernetes_secret_v1.far_secret_cne_core,
+    kubernetes_secret_v1.far_secret_cne_instance,
     data.external.component_versions,
   ]
 }

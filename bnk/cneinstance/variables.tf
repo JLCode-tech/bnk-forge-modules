@@ -33,10 +33,10 @@ variable "instance_name" {
   }
 }
 
-variable "instance_namespace" {
-  description = "Namespace for CNEInstance (wired from flo.flo_namespace)"
+variable "namespace" {
+  description = "Namespace for CNEInstance and workloads (wired from bnk-prerequisites.cne_instance_namespace)"
   type        = string
-  default     = "f5-operator"
+  default     = "f5-bnk"
 }
 
 # =============================================================================

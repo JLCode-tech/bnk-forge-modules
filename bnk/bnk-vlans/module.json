@@ -35,11 +35,11 @@
       {
         "name": "namespace",
         "type": "string",
-        "description": "Namespace where BNK components are deployed",
-        "default": "f5-operator",
+        "description": "Namespace where BNK instance components are deployed",
+        "default": "f5-bnk",
         "source": "module",
         "from_module": "k8s/bnk-prerequisites",
-        "from_output": "operator_namespace"
+        "from_output": "cne_instance_namespace"
       },
       {
         "name": "external_subnet_cidrs",

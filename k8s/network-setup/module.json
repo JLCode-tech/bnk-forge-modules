@@ -24,7 +24,7 @@
     "required": [
       {
         "module": "k8s/bnk-prerequisites",
-        "reason": "NADs deployed to operator namespace created by prerequisites"
+        "reason": "NADs deployed to instance namespace created by prerequisites"
       }
     ],
     "optional": []
@@ -37,8 +37,8 @@
         "description": "Namespace for NADs (must match CNEInstance namespace)",
         "source": "module",
         "from_module": "k8s/bnk-prerequisites",
-        "from_output": "operator_namespace",
-        "default": "f5-operator"
+        "from_output": "cne_instance_namespace",
+        "default": "f5-bnk"
       },
       {
         "name": "external_subnet_cidrs",

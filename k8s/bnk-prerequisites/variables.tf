@@ -36,22 +36,16 @@ variable "cne_pull_secret" {
 # NAMESPACE CONFIGURATION
 # =============================================================================
 
-variable "operator_namespace" {
-  description = "Namespace for FLO and ALL BNK components (CNEInstance deploys everything here)"
+variable "cne_core_namespace" {
+  description = "Namespace for FLO operator and CNE core components (CWC, IPAM, RabbitMQ, Observer, OTEL). Per F5 BNK 2.2 docs: f5-cne-core."
   type        = string
-  default     = "f5-operator"
+  default     = "f5-cne-core"
 }
 
-variable "utils_namespace" {
-  description = "Namespace for utility components (IPAM if deployed separately)"
+variable "cne_instance_namespace" {
+  description = "Namespace for CNEInstance workloads (TMM, CNE controller, VLANs, NADs). Configurable per deployment."
   type        = string
-  default     = "f5-utils"
-}
-
-variable "gateway_namespace" {
-  description = "Namespace for Gateway API resources (Gateway, HTTPRoute, etc.)"
-  type        = string
-  default     = "bnk-gw"
+  default     = "f5-bnk"
 }
 
 # =============================================================================
