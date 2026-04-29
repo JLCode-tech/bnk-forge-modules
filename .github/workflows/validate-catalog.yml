@@ -1,0 +1,27 @@
+name: validate-catalog
+
+on:
+  push:
+    branches:
+      - main
+      - "release/**"
+  pull_request:
+    branches:
+      - main
+      - "release/**"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate bnkforge.pack.json contract (forge-aligned)
+        run: python3 scripts/validate_pack_manifests.py
+
+      - name: Validate release manifest + module.json contract
+        run: python3 scripts/validate_module_metadata.py
