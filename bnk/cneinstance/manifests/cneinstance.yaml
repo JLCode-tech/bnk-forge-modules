@@ -1,3 +1,4 @@
+{% set _is_kernel_mode = (tmm_data_plane_mode | default("kernel")) == "kernel" %}
 apiVersion: k8s.f5.com/v1
 kind: CNEInstance
 metadata:
@@ -16,6 +17,10 @@ spec:
   wholeCluster: ${whole_cluster | default(true) | lower}
   dpu:
     enabled: ${dpu_enabled | default(false) | lower}
+{% if not _is_kernel_mode %}
+  dataPlane:
+    mode: sriov
+{% endif %}
   telemetry:
     loggingSubsystem:
       enabled: true
@@ -62,7 +67,6 @@ spec:
           value: cloud-network-mapping
 {% endif %}
     tmm:
-{% set _is_kernel_mode = (tmm_data_plane_mode | default("kernel")) == "kernel" %}
 {% if _is_kernel_mode %}
       annotations:
         k8s.v1.cni.cncf.io/networks: '[{"name":"${external_nad_name | default("external-netdevice")}","namespace":"${instance_namespace}","interface":"eth1"},{"name":"${internal_nad_name | default("internal-netdevice")}","namespace":"${instance_namespace}","interface":"eth2"}]'
@@ -71,6 +75,12 @@ spec:
           memory: "${tmm_memory | default("6Gi")}"
         limits:
           memory: "${tmm_memory | default("6Gi")}"
+{% else %}
+      resources:
+        requests:
+          memory: "${tmm_memory | default("4Gi")}"
+        limits:
+          memory: "${tmm_memory | default("4Gi")}"
 {% endif %}
       env:
         - name: TMM_DEFAULT_MTU

@@ -217,6 +217,17 @@ variable "tmm_default_mtu" {
   default     = 9000
 }
 
+variable "tmm_memory" {
+  description = "Memory request/limit for TMM container in sriov mode. In kernel mode, use tmm_resources instead. Default 4Gi matches FLO's Small deployment size baseline."
+  type        = string
+  default     = "4Gi"
+
+  validation {
+    condition     = can(regex("^[0-9]+(Gi|Mi|Ki|G|M|K)?$", var.tmm_memory))
+    error_message = "tmm_memory must be a valid Kubernetes memory quantity (e.g., 4Gi, 8192Mi)"
+  }
+}
+
 variable "tmm_ignore_gateways" {
   description = "Prevent TMM from using eth0 default gateway (required for SR-IOV setups)"
   type        = bool
