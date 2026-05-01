@@ -38,7 +38,7 @@
         "source": "module",
         "from_module": "bnk/flo",
         "from_output": "flo_namespace",
-        "default": "f5-operator"
+        "default": "f5-cne-core"
       },
       {
         "name": "instance_ready",

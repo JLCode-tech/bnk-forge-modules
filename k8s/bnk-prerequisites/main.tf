@@ -2,7 +2,7 @@
 # BNK Prerequisites — Namespaces + FAR Secrets + Manifest Download
 #
 # This module is the FIRST module in the BNK stack. It:
-# 1. Creates required namespaces (f5-operator, f5-utils, gateway-ns)
+# 1. Creates required namespaces (f5-cne-core, f5-bnk) per F5 BNK 2.2 two-namespace model
 # 2. Creates FAR image pull secrets from cne_pull_secret (project secret)
 # 3. Downloads BNK manifest from repo.f5.com
 # 4. Parses component versions (FLO version, cert-manager version, etc.)
@@ -120,9 +120,9 @@ locals {
 
 resource "null_resource" "bnk_cleanup" {
   triggers = {
-    operator_namespace = var.operator_namespace
-    utils_namespace    = var.utils_namespace
-    kubeconfig         = local_file.kubeconfig.filename
+    cne_core_namespace     = var.cne_core_namespace
+    cne_instance_namespace = var.cne_instance_namespace
+    kubeconfig             = local_file.kubeconfig.filename
   }
 
   # Create: no-op
@@ -135,7 +135,8 @@ resource "null_resource" "bnk_cleanup" {
     when    = destroy
     command = <<-EOT
       KUBECONFIG="${self.triggers.kubeconfig}"
-      NS="${self.triggers.operator_namespace}"
+      CORE_NS="${self.triggers.cne_core_namespace}"
+      INST_NS="${self.triggers.cne_instance_namespace}"
       KC="kubectl --kubeconfig $KUBECONFIG"
 
       echo "=== BNK Pre-Destroy Cleanup ==="
@@ -151,24 +152,24 @@ resource "null_resource" "bnk_cleanup" {
         $KC delete $wh --timeout=10s 2>/dev/null || true
       done
 
-      # Step 2: Strip finalizers from all F5 CRD instances in namespace
-      echo "Step 2: Stripping finalizers from F5 CRD instances..."
+      # Step 2: Strip finalizers from all F5 CRD instances in core namespace
+      echo "Step 2: Stripping finalizers from F5 CRD instances (core namespace)..."
       F5_CRDS=$($KC get crd -o name 2>/dev/null | grep -E 'k8s\.f5\.(com|net\.com)' | sed 's|customresourcedefinition.apiextensions.k8s.io/||')
       for crd in $F5_CRDS; do
-        RESOURCES=$($KC get $crd -n $NS -o name 2>/dev/null)
+        RESOURCES=$($KC get $crd -n $CORE_NS -o name 2>/dev/null)
         for res in $RESOURCES; do
-          echo "  Patching $res"
-          $KC patch $res -n $NS --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
+          echo "  Patching $res (in $CORE_NS)"
+          $KC patch $res -n $CORE_NS --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
         done
       done
 
-      # Step 3: Also check utils namespace
-      F5_UTILS_NS="${self.triggers.utils_namespace}"
+      # Step 3: Also check instance namespace
+      echo "Step 3: Stripping finalizers from F5 CRD instances (instance namespace)..."
       for crd in $F5_CRDS; do
-        RESOURCES=$($KC get $crd -n $F5_UTILS_NS -o name 2>/dev/null)
+        RESOURCES=$($KC get $crd -n $INST_NS -o name 2>/dev/null)
         for res in $RESOURCES; do
-          echo "  Patching $res (in $F5_UTILS_NS)"
-          $KC patch $res -n $F5_UTILS_NS --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
+          echo "  Patching $res (in $INST_NS)"
+          $KC patch $res -n $INST_NS --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
         done
       done
 
@@ -191,9 +192,8 @@ resource "null_resource" "bnk_cleanup" {
   }
 
   depends_on = [
-    kubernetes_namespace_v1.operator,
-    kubernetes_namespace_v1.utils,
-    kubernetes_namespace_v1.gateway
+    kubernetes_namespace_v1.cne_core,
+    kubernetes_namespace_v1.cne_instance,
   ]
 }
 
@@ -201,47 +201,32 @@ resource "null_resource" "bnk_cleanup" {
 # NAMESPACES
 # =============================================================================
 
-resource "kubernetes_namespace_v1" "operator" {
+resource "kubernetes_namespace_v1" "cne_core" {
   metadata {
-    name = var.operator_namespace
+    name = var.cne_core_namespace
     labels = {
-      "app.kubernetes.io/name"       = "f5-operator"
-      "app.kubernetes.io/component"  = "bnk-operators"
+      "app.kubernetes.io/name"       = "f5-cne-core"
+      "app.kubernetes.io/component"  = "bnk-core"
       "app.kubernetes.io/managed-by" = "terraform"
       "f5.com/product"               = "bnk"
     }
     annotations = {
-      "description" = "F5 BNK control plane + all components deployed by FLO via CNEInstance"
+      "description" = "F5 BNK CNE core — FLO operator, CWC, IPAM, RabbitMQ, Observer, OTEL"
     }
   }
 }
 
-resource "kubernetes_namespace_v1" "utils" {
+resource "kubernetes_namespace_v1" "cne_instance" {
   metadata {
-    name = var.utils_namespace
+    name = var.cne_instance_namespace
     labels = {
-      "app.kubernetes.io/name"       = "f5-utils"
-      "app.kubernetes.io/component"  = "bnk-utilities"
+      "app.kubernetes.io/name"       = var.cne_instance_namespace
+      "app.kubernetes.io/component"  = "bnk-instance"
       "app.kubernetes.io/managed-by" = "terraform"
       "f5.com/product"               = "bnk"
     }
     annotations = {
-      "description" = "F5 BNK utility components (IPAM if deployed separately)"
-    }
-  }
-}
-
-resource "kubernetes_namespace_v1" "gateway" {
-  metadata {
-    name = var.gateway_namespace
-    labels = {
-      "app.kubernetes.io/name"       = var.gateway_namespace
-      "app.kubernetes.io/component"  = "gateway-api"
-      "app.kubernetes.io/managed-by" = "terraform"
-      "f5.com/product"               = "bnk"
-    }
-    annotations = {
-      "description" = "Namespace for Gateway API resources (Gateway, HTTPRoute, etc.)"
+      "description" = "F5 BNK instance — CNEInstance workloads (TMM, CNE controller, VLANs, NADs)"
     }
   }
 }
@@ -252,10 +237,10 @@ resource "kubernetes_namespace_v1" "gateway" {
 # Create far-secret in every namespace. FLO + CNEInstance + CRD installer all
 # need to pull images from repo.f5.com.
 
-resource "kubernetes_secret_v1" "far_secret_operator" {
+resource "kubernetes_secret_v1" "far_secret_cne_core" {
   metadata {
     name      = "far-secret"
-    namespace = kubernetes_namespace_v1.operator.metadata[0].name
+    namespace = kubernetes_namespace_v1.cne_core.metadata[0].name
     labels = {
       "app.kubernetes.io/name"       = "far-auth"
       "app.kubernetes.io/managed-by" = "terraform"
@@ -270,28 +255,10 @@ resource "kubernetes_secret_v1" "far_secret_operator" {
   }
 }
 
-resource "kubernetes_secret_v1" "far_secret_utils" {
+resource "kubernetes_secret_v1" "far_secret_cne_instance" {
   metadata {
     name      = "far-secret"
-    namespace = kubernetes_namespace_v1.utils.metadata[0].name
-    labels = {
-      "app.kubernetes.io/name"       = "far-auth"
-      "app.kubernetes.io/managed-by" = "terraform"
-      "f5.com/product"               = "bnk"
-    }
-  }
-
-  type = "kubernetes.io/dockerconfigjson"
-
-  data = {
-    ".dockerconfigjson" = local.docker_config_json
-  }
-}
-
-resource "kubernetes_secret_v1" "far_secret_gateway" {
-  metadata {
-    name      = "far-secret"
-    namespace = kubernetes_namespace_v1.gateway.metadata[0].name
+    namespace = kubernetes_namespace_v1.cne_instance.metadata[0].name
     labels = {
       "app.kubernetes.io/name"       = "far-auth"
       "app.kubernetes.io/managed-by" = "terraform"

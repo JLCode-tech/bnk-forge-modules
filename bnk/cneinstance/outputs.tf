@@ -5,9 +5,9 @@ output "instance_name" {
   value       = var.instance_name
 }
 
-output "instance_namespace" {
+output "namespace" {
   description = "Namespace of the CNEInstance"
-  value       = var.instance_namespace
+  value       = var.namespace
 }
 
 output "instance_ready" {

@@ -68,12 +68,12 @@ locals {
   multus_networks_annotation = local.is_kernel_mode ? jsonencode([
     {
       name      = var.external_nad_name
-      namespace = var.instance_namespace
+      namespace = var.namespace
       interface = "eth1"
     },
     {
       name      = var.internal_nad_name
-      namespace = var.instance_namespace
+      namespace = var.namespace
       interface = "eth2"
     }
   ]) : ""
@@ -135,7 +135,7 @@ locals {
     kind       = "CNEInstance"
     metadata = {
       name      = var.instance_name
-      namespace = var.instance_namespace
+      namespace = var.namespace
       labels = {
         "app.kubernetes.io/name"       = var.instance_name
         "app.kubernetes.io/component"  = "cne-instance"
@@ -263,7 +263,7 @@ locals {
     kind       = "ConfigMap"
     metadata = {
       name      = "tmm-init"
-      namespace = var.instance_namespace
+      namespace = var.namespace
       labels = {
         "app.kubernetes.io/name"       = "tmm-init"
         "app.kubernetes.io/component"  = "tmm-config"
@@ -297,7 +297,7 @@ resource "null_resource" "tmm_init_apply" {
 
   triggers = {
     cm_hash    = sha256(yamlencode(local.tmm_init_configmap))
-    namespace  = var.instance_namespace
+    namespace  = var.namespace
     kubeconfig = local_file.kubeconfig.filename
     name       = "tmm-init"
   }
@@ -336,7 +336,7 @@ resource "null_resource" "cloud_network_mapping" {
 
   triggers = {
     mappings_hash = sha256(jsonencode(var.cloud_az_subnet_mappings))
-    namespace     = var.instance_namespace
+    namespace     = var.namespace
     kubeconfig    = local_file.kubeconfig.filename
   }
 
@@ -348,7 +348,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: cloud-network-mapping
-  namespace: ${var.instance_namespace}
+  namespace: ${var.namespace}
 data:
   config.yaml: |
     availability_zones:
@@ -393,7 +393,7 @@ resource "null_resource" "cneinstance" {
   triggers = {
     manifest_hash = sha256(yamlencode(local.cneinstance_manifest))
     name          = var.instance_name
-    namespace     = var.instance_namespace
+    namespace     = var.namespace
     kubeconfig    = local_file.kubeconfig.filename
     # Run every apply — if the CNEInstance CR is deleted out-of-band (cluster
     # disruption, manual cleanup, bnk_cleanup destroy), manifest_hash won't
@@ -465,11 +465,11 @@ resource "null_resource" "wait_for_available" {
       while [ $ELAPSED -lt $TIMEOUT ]; do
         # Get the Available condition
         STATUS=$(${local.kubectl} get cneinstance ${var.instance_name} \
-          -n ${var.instance_namespace} \
+          -n ${var.namespace} \
           -o jsonpath='{.status.conditions[?(@.type=="Available")].status}' 2>/dev/null)
 
         REASON=$(${local.kubectl} get cneinstance ${var.instance_name} \
-          -n ${var.instance_namespace} \
+          -n ${var.namespace} \
           -o jsonpath='{.status.conditions[?(@.type=="Available")].reason}' 2>/dev/null)
 
         if [ "$STATUS" = "True" ]; then
@@ -486,10 +486,10 @@ resource "null_resource" "wait_for_available" {
         echo ""
         echo "WARNING: CNEInstance not yet Available after $${TIMEOUT}s"
         echo "This may be normal for first deployment. Check FLO logs:"
-        echo "  kubectl logs -n ${var.instance_namespace} -l app=flo --tail=50"
+        echo "  kubectl logs -n ${var.namespace} -l app=flo --tail=50"
         echo ""
         echo "Current CNEInstance status:"
-        ${local.kubectl} get cneinstance ${var.instance_name} -n ${var.instance_namespace} -o yaml 2>/dev/null | grep -A5 "conditions:" || true
+        ${local.kubectl} get cneinstance ${var.instance_name} -n ${var.namespace} -o yaml 2>/dev/null | grep -A5 "conditions:" || true
         # Don't fail — the instance may still be deploying
       fi
     EOT
@@ -510,19 +510,19 @@ resource "null_resource" "verify_pods" {
       KUBECTL="${local.kubectl}"
 
       echo ""
-      echo "--- Pods in ${var.instance_namespace} ---"
-      $KUBECTL get pods -n ${var.instance_namespace} -o wide 2>/dev/null
+      echo "--- Pods in ${var.namespace} ---"
+      $KUBECTL get pods -n ${var.namespace} -o wide 2>/dev/null
 
       echo ""
       echo "--- CNEInstance Status ---"
-      $KUBECTL get cneinstance ${var.instance_name} -n ${var.instance_namespace} 2>/dev/null
+      $KUBECTL get cneinstance ${var.instance_name} -n ${var.namespace} 2>/dev/null
 
       echo ""
       echo "--- Component Summary ---"
       # Count running pods
-      TOTAL=$($KUBECTL get pods -n ${var.instance_namespace} --no-headers 2>/dev/null | wc -l)
-      RUNNING=$($KUBECTL get pods -n ${var.instance_namespace} --no-headers 2>/dev/null | grep -c "Running" || true)
-      COMPLETED=$($KUBECTL get pods -n ${var.instance_namespace} --no-headers 2>/dev/null | grep -c "Completed" || true)
+      TOTAL=$($KUBECTL get pods -n ${var.namespace} --no-headers 2>/dev/null | wc -l)
+      RUNNING=$($KUBECTL get pods -n ${var.namespace} --no-headers 2>/dev/null | grep -c "Running" || true)
+      COMPLETED=$($KUBECTL get pods -n ${var.namespace} --no-headers 2>/dev/null | grep -c "Completed" || true)
 
       echo "Total pods: $TOTAL"
       echo "Running: $RUNNING"
@@ -532,7 +532,7 @@ resource "null_resource" "verify_pods" {
       echo ""
       echo "--- Key Components ---"
       for component in flo cne-controller tmm cwc dssm observer otel rabbit fluentd; do
-        COUNT=$($KUBECTL get pods -n ${var.instance_namespace} --no-headers 2>/dev/null | grep -c "$component" || true)
+        COUNT=$($KUBECTL get pods -n ${var.namespace} --no-headers 2>/dev/null | grep -c "$component" || true)
         if [ "$COUNT" -gt 0 ]; then
           echo "  OK: $component ($COUNT pods)"
         else

@@ -40,13 +40,13 @@
   "inputs": {
     "required": [
       {
-        "name": "instance_namespace",
+        "name": "namespace",
         "type": "string",
-        "description": "Namespace for CNEInstance",
+        "description": "Namespace for CNEInstance and workloads",
         "source": "module",
-        "from_module": "bnk/flo",
-        "from_output": "flo_namespace",
-        "default": "f5-operator"
+        "from_module": "k8s/bnk-prerequisites",
+        "from_output": "cne_instance_namespace",
+        "default": "f5-bnk"
       },
       {
         "name": "manifest_version",
@@ -161,7 +161,7 @@
         "sensitive": false
       },
       {
-        "name": "instance_namespace",
+        "name": "namespace",
         "type": "string",
         "description": "Namespace of the CNEInstance",
         "used_by": ["bnk/bnk-gatewayclass"],

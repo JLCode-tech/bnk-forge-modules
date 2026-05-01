@@ -25,7 +25,7 @@ variable "cluster_name" {
 variable "namespace" {
   description = "Namespace for VLAN CRs (must match CNEInstance namespace)"
   type        = string
-  default     = "f5-operator"
+  default     = "f5-bnk"
 }
 
 # =============================================================================

@@ -12,9 +12,9 @@ variable "cluster_name" {
 }
 
 variable "namespace" {
-  description = "Namespace for NADs — must match CNEInstance namespace (f5-operator)"
+  description = "Namespace for NADs — must match CNEInstance namespace"
   type        = string
-  default     = "f5-operator"
+  default     = "f5-bnk"
 }
 
 # =============================================================================
