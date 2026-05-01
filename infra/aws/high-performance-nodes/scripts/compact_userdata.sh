@@ -57,13 +57,22 @@ if ! is_checkpoint_complete "kernel_params"; then
     fi
     if grep -q "hugepagesz=2M" /proc/cmdline; then
         NEEDS_REBOOT=false
-    else
+    elif [ "$TMM_DATA_PLANE_MODE" = "sriov" ]; then
         NEEDS_REBOOT=true
         mkdir -p /etc/default/grub.d
         echo "GRUB_CMDLINE_LINUX=\"$${GRUB_CMDLINE_LINUX:-} $KP\"" > /etc/default/grub.d/99-dpdk-hugepages.cfg
         cp /etc/default/grub /etc/default/grub.backup
         grep -q "hugepagesz=2M" /etc/default/grub || sed -i "s/biosdevname=0/& $KP/g" /etc/default/grub
         grub2-mkconfig -o /boot/grub2/grub.cfg
+    else
+        # Kernel mode: skip grub mutation. The 60s-delayed reboot below races with the EKS
+        # bootstrap script and interrupts kubelet's first registration. Hugepages are
+        # allocated at runtime via sysfs (below) and persisted across future operator-triggered
+        # reboots by the systemd-enabled dpdk-hugepages.service. isolcpus/nohz_full/rcu_nocbs
+        # would require a reboot to take effect but they are TMM jitter optimizations only —
+        # TMM still works via cpuset pinning in the pod spec.
+        NEEDS_REBOOT=false
+        log "kernel mode: skipping grub mutation, no reboot will be scheduled"
     fi
     echo $HUGEPAGES_2MI > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages 2>/dev/null || true
     echo $HUGEPAGES_1GI > /sys/kernel/mm/hugepages/hugepages-1048576kB/nr_hugepages 2>/dev/null || true
