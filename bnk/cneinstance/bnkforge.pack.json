@@ -204,6 +204,15 @@
         "source": "auto"
       },
       {
+        "name": "bnk_gateway_chassis",
+        "type": "object({name=optional(string),default_listener_networks=list(object({name=string,start_address=string,end_address=string}))})",
+        "description": "F5BnkGateway chassis CR — required on AWS/EKS for Gateway-API translation. Without it the CNE controller silently ignores all Gateway/HTTPRoute CRs even when Programmed=True. Empty default_listener_networks = skip (on-prem default).",
+        "default": {
+          "default_listener_networks": []
+        },
+        "source": "user"
+      },
+      {
         "name": "tmm_init_enabled",
         "type": "boolean",
         "description": "Create the tmm-init ConfigMap (Doc 3 page 28-29). Required for kernel-mode TMM to route response traffic back to clients on subnets other than the data-plane subnets. Set true on AWS kernel-mode deployments.",

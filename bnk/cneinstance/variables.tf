@@ -114,6 +114,34 @@ variable "cloud_az_subnet_mappings" {
   default = []
 }
 
+variable "bnk_gateway_chassis" {
+  description = <<-EOT
+    F5BnkGateway chassis CR config. Must be set for AWS/EKS deployments —
+    the CNE controller's Gateway-API translation pipeline depends on it.
+    Without this CR, the controller logs "Watched application namespaces:
+    []" and ignores all Gateway+HTTPRoute CRs even when CNEInstance shows
+    Programmed=True.
+
+    Use explicit start_address + end_address per listener network. The
+    CRD's ipv4BaseCidr alternative is rejected by the controller runtime
+    ("IPRange error: start/end IP addresses do not match IPv4 family").
+
+    Empty default_listener_networks list = skip chassis CR creation
+    (preserves pre-existing on-prem behavior).
+  EOT
+  type = object({
+    name = optional(string, "bnk-gateway-chassis")
+    default_listener_networks = list(object({
+      name          = string
+      start_address = string
+      end_address   = string
+    }))
+  })
+  default = {
+    default_listener_networks = []
+  }
+}
+
 # =============================================================================
 # DEPLOYMENT CONFIGURATION
 # =============================================================================

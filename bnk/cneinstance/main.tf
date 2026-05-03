@@ -377,6 +377,67 @@ MANIFEST
 }
 
 # =============================================================================
+# F5BNKGATEWAY CHASSIS CR (AWS/EKS — required for Gateway-API translation)
+# =============================================================================
+# Despite F5 docs saying F5BnkGateway is optional, in f5ingress:v14.19.4-0.1.36
+# it's the trigger that activates the entire Gateway translation pipeline on
+# AWS/EKS. Without it the controller logs "Watched application namespaces: []"
+# and silently ignores all Gateway+HTTPRoute CRs even with Programmed=True.
+#
+# Recipe verified on aws-syd-test 2026-04-30 — see agent memory note
+# project_aws_syd_test_tmm_kernelmode_break.md for the discovery trail.
+#
+# Created in the same namespace as the CNEInstance (controller's namespace).
+# Empty default_listener_networks list = skip (preserves on-prem behavior).
+
+resource "null_resource" "f5_bnkgateway_chassis" {
+  count = length(var.bnk_gateway_chassis.default_listener_networks) > 0 ? 1 : 0
+
+  triggers = {
+    chassis_hash = sha256(jsonencode(var.bnk_gateway_chassis))
+    namespace    = var.instance_namespace
+    name         = var.bnk_gateway_chassis.name
+    kubeconfig   = local_file.kubeconfig.filename
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "=== Creating F5BnkGateway chassis CR ==="
+      cat <<'MANIFEST' | ${local.kubectl} apply -f -
+apiVersion: k8s.f5net.com/v1
+kind: F5BnkGateway
+metadata:
+  name: ${var.bnk_gateway_chassis.name}
+  namespace: ${var.instance_namespace}
+spec:
+  ingressConfig:
+    defaultListenerNetworks:
+%{for net in var.bnk_gateway_chassis.default_listener_networks~}
+    - name: "${net.name}"
+      startAddress: "${net.start_address}"
+      endAddress: "${net.end_address}"
+%{endfor~}
+MANIFEST
+      echo "F5BnkGateway chassis ${var.bnk_gateway_chassis.name} created"
+    EOT
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      echo "=== Deleting F5BnkGateway chassis ${self.triggers.name} ==="
+      kubectl --kubeconfig ${self.triggers.kubeconfig} delete f5-bnkgateway ${self.triggers.name} \
+        -n ${self.triggers.namespace} 2>/dev/null || \
+      echo "F5BnkGateway already deleted or not found"
+    EOT
+  }
+
+  depends_on = [
+    null_resource.cneinstance,
+  ]
+}
+
+# =============================================================================
 # WRITE MANIFEST TO FILE
 # =============================================================================
 
