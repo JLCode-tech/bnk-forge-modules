@@ -25,7 +25,7 @@ data:
 
     import boto3
     from fastapi import FastAPI, HTTPException
-    from prometheus_client import CONTENT_TYPE_LATEST, Gauge, Histogram, generate_latest
+    from prometheus_client import CONTENT_TYPE_LATEST, Gauge, Histogram, generate_latest, start_http_server
     from pydantic import BaseModel
     from starlette.responses import Response
 
@@ -33,6 +33,7 @@ data:
     MODEL_NAME = os.environ.get("MODEL_NAME", MODEL_ID.replace("/", "-"))
     AWS_REGION = os.environ.get("AWS_REGION", "ap-southeast-2")
     CHAT_PORT = int(os.environ.get("CHAT_PORT", "8080"))
+    METRICS_PORT = int(os.environ.get("METRICS_PORT", "9100"))
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     log = logging.getLogger("bedrock-shim")
@@ -136,5 +137,14 @@ data:
 
     if __name__ == "__main__":
         import uvicorn
+        # Start a dedicated prometheus_client server on METRICS_PORT so the
+        # ServiceMonitor (which scrapes :metrics named-port → 9100) actually
+        # finds an open socket. Previously /metrics was only mounted on the
+        # FastAPI app at CHAT_PORT (8080), so port 9100 was unbound and the
+        # ServiceMonitor scrape silently failed (`up=0`). Keeping the FastAPI
+        # /metrics endpoint too — harmless duplicate, lets ad-hoc curl from
+        # either port still work.
+        start_http_server(METRICS_PORT)
+        log.info("metrics server listening on :%d", METRICS_PORT)
         log.info("starting bedrock-shim model=%s region=%s", MODEL_NAME, AWS_REGION)
         uvicorn.run(app, host="0.0.0.0", port=CHAT_PORT, log_level="info")
