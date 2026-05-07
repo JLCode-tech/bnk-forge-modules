@@ -117,6 +117,20 @@
         "description": "(sriov mode only) SR-IOV device plugin resource name for internal network",
         "default": "intel.com/internal_netdevice",
         "source": "user"
+      },
+      {
+        "name": "external_nad_name",
+        "type": "string",
+        "description": "Name for external NAD (default: external-netdevice, DPU: sf-external)",
+        "default": "external-netdevice",
+        "source": "user"
+      },
+      {
+        "name": "internal_nad_name",
+        "type": "string",
+        "description": "Name for internal NAD (default: internal-netdevice, DPU: sf-internal)",
+        "default": "internal-netdevice",
+        "source": "user"
       }
     ]
   },
@@ -126,7 +140,7 @@
         "name": "external_nad_name",
         "type": "string",
         "description": "Name of external NAD",
-        "value": "external-netdevice",
+        "value": "${external_nad_name}",
         "used_by": [
           "bnk/cneinstance"
         ],
@@ -136,7 +150,7 @@
         "name": "internal_nad_name",
         "type": "string",
         "description": "Name of internal NAD",
-        "value": "internal-netdevice",
+        "value": "${internal_nad_name}",
         "used_by": [
           "bnk/cneinstance"
         ],
