@@ -54,6 +54,12 @@ variable "gateway_namespace" {
   default     = "bnk-gw"
 }
 
+variable "instance_namespace" {
+  description = "Namespace where CNEInstance will be created (e.g. f5-bnk for DPU mode). When set and different from operator_namespace, creates an additional namespace + far-secret here. Leave empty to skip."
+  type        = string
+  default     = ""
+}
+
 # =============================================================================
 # BNK MANIFEST VERSION
 # =============================================================================

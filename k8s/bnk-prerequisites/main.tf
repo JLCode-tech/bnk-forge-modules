@@ -122,6 +122,7 @@ resource "null_resource" "bnk_cleanup" {
   triggers = {
     operator_namespace = var.operator_namespace
     utils_namespace    = var.utils_namespace
+    instance_namespace = var.instance_namespace
     kubeconfig         = local_file.kubeconfig.filename
   }
 
@@ -172,6 +173,18 @@ resource "null_resource" "bnk_cleanup" {
         done
       done
 
+      # Step 3b: Also check instance namespace (DPU mode)
+      INSTANCE_NS="${self.triggers.instance_namespace}"
+      if [ -n "$INSTANCE_NS" ] && [ "$INSTANCE_NS" != "$NS" ] && [ "$INSTANCE_NS" != "$F5_UTILS_NS" ]; then
+        for crd in $F5_CRDS; do
+          RESOURCES=$($KC get $crd -n $INSTANCE_NS -o name 2>/dev/null)
+          for res in $RESOURCES; do
+            echo "  Patching $res (in $INSTANCE_NS)"
+            $KC patch $res -n $INSTANCE_NS --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
+          done
+        done
+      fi
+
       # Step 4: Delete all F5 CRDs (cluster-scoped)
       # FLO's crd-installer expects to create these fresh. Stale CRDs from a
       # previous deploy cause conflicts and failed reconciliation.
@@ -193,7 +206,8 @@ resource "null_resource" "bnk_cleanup" {
   depends_on = [
     kubernetes_namespace_v1.operator,
     kubernetes_namespace_v1.utils,
-    kubernetes_namespace_v1.gateway
+    kubernetes_namespace_v1.gateway,
+    kubernetes_namespace_v1.instance,
   ]
 }
 
@@ -292,6 +306,49 @@ resource "kubernetes_secret_v1" "far_secret_gateway" {
   metadata {
     name      = "far-secret"
     namespace = kubernetes_namespace_v1.gateway.metadata[0].name
+    labels = {
+      "app.kubernetes.io/name"       = "far-auth"
+      "app.kubernetes.io/managed-by" = "terraform"
+      "f5.com/product"               = "bnk"
+    }
+  }
+
+  type = "kubernetes.io/dockerconfigjson"
+
+  data = {
+    ".dockerconfigjson" = local.docker_config_json
+  }
+}
+
+# =============================================================================
+# INSTANCE NAMESPACE (DPU mode — f5-bnk)
+# =============================================================================
+# When instance_namespace is set and differs from operator_namespace, FLO
+# deploys BNK components there and needs a far-secret for image pulls.
+
+resource "kubernetes_namespace_v1" "instance" {
+  count = var.instance_namespace != "" && var.instance_namespace != var.operator_namespace ? 1 : 0
+
+  metadata {
+    name = var.instance_namespace
+    labels = {
+      "app.kubernetes.io/name"       = var.instance_namespace
+      "app.kubernetes.io/component"  = "bnk-instance"
+      "app.kubernetes.io/managed-by" = "terraform"
+      "f5.com/product"               = "bnk"
+    }
+    annotations = {
+      "description" = "F5 BNK instance namespace (CNEInstance + all BNK components)"
+    }
+  }
+}
+
+resource "kubernetes_secret_v1" "far_secret_instance" {
+  count = var.instance_namespace != "" && var.instance_namespace != var.operator_namespace ? 1 : 0
+
+  metadata {
+    name      = "far-secret"
+    namespace = kubernetes_namespace_v1.instance[0].metadata[0].name
     labels = {
       "app.kubernetes.io/name"       = "far-auth"
       "app.kubernetes.io/managed-by" = "terraform"
