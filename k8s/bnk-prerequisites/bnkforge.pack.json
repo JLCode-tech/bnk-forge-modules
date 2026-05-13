@@ -32,8 +32,8 @@
       {
         "name": "cne_pull_secret",
         "type": "string",
-        "description": "F5 FAR registry credentials. Accepts a bare base64-encoded service account JSON key, or a base64-encoded dockerconfigjson. Format is auto-detected. Injected as a project secret.",
-        "source": "project_secret",
+        "description": "F5 FAR registry credentials. Accepts a bare base64-encoded service account JSON key, or a base64-encoded dockerconfigjson. Format is auto-detected. Bind to a project secret in the deploy form.",
+        "source": "user",
         "sensitive": true
       }
     ],
