@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "module": {
+    "name": "BNK Prerequisites",
+    "path": "k8s/bnk-prerequisites",
+    "version": "1.0.0",
+    "category": "k8s",
+    "description": "Creates BNK namespaces, FAR image pull secrets, and downloads the BNK manifest to parse component versions. Foundation module — everything else in the BNK stack depends on it."
+  },
+  "deployment_pack": {
+    "engine": "opentofu",
+    "runner_profile": "opentofu-default",
+    "working_directory": ".",
+    "entrypoints": {
+      "module_root": "."
+    },
+    "lifecycle": {
+      "supports_init": true,
+      "supports_plan": true,
+      "supports_apply": true,
+      "supports_destroy": true,
+      "supports_refresh": true,
+      "supports_drift": true
+    }
+  },
+  "dependencies": {
+    "required": [],
+    "optional": []
+  },
+  "inputs": {
+    "required": [
+      {
+        "name": "cne_pull_secret",
+        "type": "string",
+        "description": "F5 FAR registry credentials. Accepts a bare base64-encoded service account JSON key, or a base64-encoded dockerconfigjson. Format is auto-detected. Injected as a project secret.",
+        "source": "project_secret",
+        "sensitive": true
+      }
+    ],
+    "optional": [
+      {
+        "name": "forge_kubeconfig_content",
+        "type": "string",
+        "description": "Kubeconfig YAML content. Auto-injected by BNK-Forge from the selected cluster. Set manually for standalone usage.",
+        "default": "",
+        "source": "auto",
+        "sensitive": true
+      },
+      {
+        "name": "operator_namespace",
+        "type": "string",
+        "description": "Namespace for FLO and all BNK components (CNEInstance deploys everything here).",
+        "default": "f5-operator",
+        "source": "user"
+      },
+      {
+        "name": "utils_namespace",
+        "type": "string",
+        "description": "Namespace for utility components (e.g. IPAM if deployed separately).",
+        "default": "f5-utils",
+        "source": "user"
+      },
+      {
+        "name": "gateway_namespace",
+        "type": "string",
+        "description": "Namespace for Gateway API resources (Gateway, HTTPRoute, etc.).",
+        "default": "bnk-gw",
+        "source": "user"
+      },
+      {
+        "name": "instance_namespace",
+        "type": "string",
+        "description": "Namespace where CNEInstance will be created (e.g. f5-bnk for DPU mode). When set and different from operator_namespace, creates an additional namespace + far-secret here. Leave empty to skip.",
+        "default": "",
+        "source": "user"
+      },
+      {
+        "name": "bnk_manifest_version",
+        "type": "string",
+        "description": "BNK manifest version to download from FAR (e.g. 2.2.1-3.2226.0-0.0.511). Must start with X.Y.Z- format.",
+        "default": "2.2.1-3.2226.0-0.0.511",
+        "source": "user"
+      },
+      {
+        "name": "cluster_name",
+        "type": "string",
+        "description": "Name of the Kubernetes cluster. Auto-wired from the cloud cluster module when available.",
+        "default": "",
+        "source": "auto"
+      }
+    ]
+  },
+  "outputs": {
+    "key_outputs": [
+      {
+        "name": "operator_namespace",
+        "type": "string",
+        "description": "Operator namespace name (FLO + all BNK components)."
+      },
+      {
+        "name": "utils_namespace",
+        "type": "string",
+        "description": "Utilities namespace name."
+      },
+      {
+        "name": "gateway_namespace",
+        "type": "string",
+        "description": "Gateway namespace name."
+      },
+      {
+        "name": "far_secret_name",
+        "type": "string",
+        "description": "Name of the FAR image pull secret (always 'far-secret')."
+      },
+      {
+        "name": "flo_version",
+        "type": "string",
+        "description": "FLO Helm chart version parsed from the BNK manifest."
+      },
+      {
+        "name": "manifest_version",
+        "type": "string",
+        "description": "BNK manifest version used."
+      },
+      {
+        "name": "component_versions",
+        "type": "map",
+        "description": "All component versions parsed from the BNK manifest."
+      },
+      {
+        "name": "cert_manager_version",
+        "type": "string",
+        "description": "F5 cert-manager version from the manifest (informational — the cert-manager module uses its own version)."
+      },
+      {
+        "name": "prerequisites_ready",
+        "type": "boolean",
+        "description": "Gate output — true when namespaces, secrets, and manifest parsing are all complete."
+      }
+    ]
+  }
+}

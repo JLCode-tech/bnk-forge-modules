@@ -27,6 +27,14 @@
       }
     },
     {
+      "path": "k8s/bnk-cert-issuer",
+      "version": "1.0.0",
+      "state": "active",
+      "execution": {
+        "deploy_models": ["kubernetes_manifest"]
+      }
+    },
+    {
       "path": "k8s/network-setup",
       "version": "2.0.0",
       "state": "active",
