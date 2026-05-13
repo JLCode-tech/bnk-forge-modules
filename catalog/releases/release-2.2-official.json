@@ -31,6 +31,7 @@
       "version": "1.0.0",
       "state": "active",
       "execution": {
+        "engine": "kubernetes",
         "deploy_models": ["kubernetes_manifest"]
       }
     },

@@ -135,9 +135,11 @@ def validate_release_module_entry(entry: dict, module_json: dict, manifest: dict
         errors.append(f"{module_path}: source.channel must match release.channel ({release.get('channel')})")
 
     execution = module_json.get("execution", {})
-    if execution.get("engine") != release.get("execution_engine"):
+    entry_engine = entry.get("execution", {}).get("engine")
+    expected_engine = entry_engine if entry_engine else release.get("execution_engine")
+    if execution.get("engine") != expected_engine:
         errors.append(
-            f"{module_path}: execution.engine must match release.execution_engine ({release.get('execution_engine')})"
+            f"{module_path}: execution.engine must match expected ({expected_engine})"
         )
 
     expected_deploy_models = entry.get("execution", {}).get("deploy_models")
