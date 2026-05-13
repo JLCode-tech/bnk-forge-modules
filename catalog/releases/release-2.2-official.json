@@ -12,6 +12,7 @@
   "official_modules": [
     {
       "path": "k8s/bnk-prerequisites",
+      "version": "1.0.0",
       "state": "active",
       "execution": {
         "deploy_models": ["terraform", "kubernetes_manifest", "shell"]
@@ -19,6 +20,7 @@
     },
     {
       "path": "k8s/cert-manager",
+      "version": "3.1.0",
       "state": "active",
       "execution": {
         "deploy_models": ["terraform", "helm", "kubernetes_manifest"]
@@ -26,6 +28,7 @@
     },
     {
       "path": "k8s/network-setup",
+      "version": "2.0.0",
       "state": "active",
       "execution": {
         "deploy_models": ["terraform", "kubernetes_manifest"]
@@ -33,11 +36,13 @@
     },
     {
       "path": "k8s/bnk-namespaces",
+      "version": "2.0.0",
       "state": "deprecated",
       "reason": "Superseded by k8s/bnk-prerequisites in release/2.2"
     },
     {
       "path": "bnk/flo",
+      "version": "2.0.0",
       "state": "active",
       "execution": {
         "deploy_models": ["terraform", "helm", "kubernetes_manifest", "shell"]
@@ -45,6 +50,7 @@
     },
     {
       "path": "bnk/cneinstance",
+      "version": "2.0.0",
       "state": "active",
       "execution": {
         "deploy_models": ["terraform", "kubernetes_manifest"]
@@ -52,6 +58,7 @@
     },
     {
       "path": "bnk/bnk-gatewayclass",
+      "version": "2.1.0",
       "state": "active",
       "execution": {
         "deploy_models": ["terraform", "kubernetes_manifest"]
@@ -89,6 +96,7 @@
     },
     {
       "path": "bnk/far-setup",
+      "version": "2.0.0",
       "state": "deprecated",
       "reason": "Legacy path; use k8s/bnk-prerequisites"
     }
