@@ -136,14 +136,14 @@ resource "null_resource" "vlans" {
 
       kubeconfig="${local_file.kubeconfig.filename}"
       namespace="${var.namespace}"
-      echo "Waiting for F5 validation webhook..."
+      echo "Waiting for F5 validation webhook endpoint..."
       WEBHOOK_TIMEOUT=150
       WEBHOOK_ELAPSED=0
       while [ $WEBHOOK_ELAPSED -lt $WEBHOOK_TIMEOUT ]; do
         ENDPOINT_IP=$(kubectl --kubeconfig $${kubeconfig} get endpoints f5-validation-svc \
           -n $${namespace} -o jsonpath='{.subsets[0].addresses[0].ip}' 2>/dev/null)
         if [ -n "$ENDPOINT_IP" ]; then
-          echo "F5 validation webhook ready (endpoint: $ENDPOINT_IP)"
+          echo "F5 validation webhook endpoint registered: $ENDPOINT_IP"
           break
         fi
         echo "  Waiting for f5-validation-svc endpoint ($${WEBHOOK_ELAPSED}s)..."
@@ -151,25 +151,40 @@ resource "null_resource" "vlans" {
         WEBHOOK_ELAPSED=$((WEBHOOK_ELAPSED + 5))
       done
       if [ $WEBHOOK_ELAPSED -ge $WEBHOOK_TIMEOUT ]; then
-        echo "WARNING: F5 validation webhook not ready after $${WEBHOOK_TIMEOUT}s — apply may fail"
+        echo "WARNING: F5 validation webhook endpoint not registered after $${WEBHOOK_TIMEOUT}s — apply may fail"
       fi
 
-      # Endpoint registered but port may still be starting TLS — add grace period + retry
-      sleep 15
-      ${local.kubectl} apply -f ${local_file.vlan_manifests.filename} 2>&1
-      if [ $? -ne 0 ]; then
-        echo "First apply failed — webhook may still be starting. Retrying in 30s..."
-        sleep 30
-        ${local.kubectl} apply -f ${local_file.vlan_manifests.filename} 2>&1
-        if [ $? -ne 0 ]; then
-          echo "Second attempt failed — retrying one more time in 30s..."
-          sleep 30
-          ${local.kubectl} apply -f ${local_file.vlan_manifests.filename} 2>&1
-          if [ $? -ne 0 ]; then
-            echo "ERROR: Failed to apply VLAN manifests after 3 attempts"
-            exit 1
-          fi
+      # Endpoint registration reflects kubelet's readiness probe, which on a
+      # cold-start cne-controller pod fires before the in-container TLS server
+      # binds port 3340. Apply attempts during that gap fail with "connection
+      # refused" / "failed to call webhook". Retry the apply on those transient
+      # errors with a bounded budget; fail fast on any non-transient error
+      # (validation rejection, kubeconfig problem, …) so we don't mask real bugs.
+      APPLY_TIMEOUT=300
+      APPLY_INTERVAL=15
+      APPLY_ELAPSED=0
+      APPLY_OK=0
+      while [ $APPLY_ELAPSED -lt $APPLY_TIMEOUT ]; do
+        APPLY_OUT=$(${local.kubectl} apply -f ${local_file.vlan_manifests.filename} 2>&1)
+        APPLY_RC=$?
+        if [ $APPLY_RC -eq 0 ]; then
+          echo "$APPLY_OUT"
+          APPLY_OK=1
+          break
         fi
+        if echo "$APPLY_OUT" | grep -qiE 'connection refused|no endpoints available|failed to call webhook|i/o timeout|context deadline exceeded'; then
+          echo "  Webhook transient at $${APPLY_ELAPSED}s: $(echo "$APPLY_OUT" | tr '\n' ' ' | cut -c1-180)"
+          sleep $APPLY_INTERVAL
+          APPLY_ELAPSED=$((APPLY_ELAPSED + APPLY_INTERVAL))
+          continue
+        fi
+        echo "$APPLY_OUT"
+        echo "ERROR: kubectl apply failed with non-retriable error"
+        exit 1
+      done
+      if [ $APPLY_OK -ne 1 ]; then
+        echo "ERROR: kubectl apply did not succeed within $${APPLY_TIMEOUT}s (webhook never responded)"
+        exit 1
       fi
 
       echo ""
