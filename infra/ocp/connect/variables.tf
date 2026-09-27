@@ -9,7 +9,7 @@ variable "api_server_url" {
 }
 
 variable "kubeconfig_content" {
-  description = "Kubeconfig YAML content for the OCP cluster"
+  description = "Kubeconfig YAML content for the OCP cluster. Automatically superseded by the project's registered-cluster kubeconfig (local.forge_kubeconfig) when one exists; this variable is only used when no registered cluster is present, e.g. standalone or manual runs."
   type        = string
   sensitive   = true
   default     = ""

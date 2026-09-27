@@ -2,7 +2,7 @@
   "module": {
     "name": "OpenShift Cluster Connection",
     "path": "infra/ocp/connect",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "layer": "infrastructure",
     "category": "infra",
     "description": "Validates and connects to an existing OpenShift cluster",
@@ -43,7 +43,7 @@
       {
         "name": "kubeconfig_content",
         "type": "string",
-        "description": "Kubeconfig YAML content for the OCP cluster",
+        "description": "Kubeconfig YAML content for the OCP cluster. Automatically superseded by the project's registered-cluster kubeconfig when one exists; only used when no registered cluster is present, e.g. standalone or manual runs.",
         "default": "",
         "source": "project_secret"
       },

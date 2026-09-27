@@ -2,7 +2,12 @@
 # Validates connectivity to an existing OpenShift cluster
 
 locals {
-  kubeconfig = var.kubeconfig_content != "" ? var.kubeconfig_content : yamlencode({
+  # Precedence: forge-injected kubeconfig (registered cluster) > manual
+  # var.kubeconfig_content (standalone/override) > token-based fallback.
+  # local.forge_kubeconfig is injected by BNK-Forge via bnk_forge_locals.tf
+  # whenever this workspace has a registered cluster; try() falls through
+  # to the next tier when forge hasn't injected it (e.g. standalone runs).
+  kubeconfig = try(local.forge_kubeconfig, var.kubeconfig_content != "" ? var.kubeconfig_content : yamlencode({
     apiVersion = "v1"
     kind       = "Config"
     clusters = [{ name = "ocp", cluster = {
@@ -12,7 +17,7 @@ locals {
     users           = [{ name = "ocp-user", user = { token = var.oc_token } }]
     contexts        = [{ name = "default", context = { cluster = "ocp", user = "ocp-user" } }]
     current-context = "default"
-  })
+  }))
 }
 
 resource "local_file" "kubeconfig" {
