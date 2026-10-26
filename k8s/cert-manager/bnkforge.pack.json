@@ -3,7 +3,7 @@
   "module": {
     "name": "Cert-Manager (Jetstack)",
     "path": "k8s/cert-manager",
-    "version": "3.1.0",
+    "version": "3.2.0",
     "category": "k8s",
     "description": "Deploys Jetstack cert-manager chart with BNK-compatible defaults for CRDs and controller/webhook behavior."
   },
@@ -65,7 +65,7 @@
         "name": "cert_manager_version",
         "type": "string",
         "description": "Jetstack cert-manager chart version",
-        "default": "v1.16.1",
+        "default": "v1.16.2",
         "source": "user"
       },
       {

@@ -2,7 +2,7 @@
   "module": {
     "name": "CNEInstance",
     "path": "bnk/cneinstance",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "layer": "application",
     "category": "bnk",
     "description": "Creates CNEInstance custom resource which triggers FLO to deploy all BNK components (TMM, CWC, DSSM, Observer, OTEL, RabbitMQ, etc.). Waits for Available condition and verifies pods are running.",
@@ -11,7 +11,7 @@
   },
   "source": {
     "kind": "official",
-    "channel": "release/2.2"
+    "channel": "release/2.4.1"
   },
   "execution": {
     "engine": "opentofu",
@@ -54,7 +54,8 @@
         "description": "BNK manifest version",
         "source": "module",
         "from_module": "k8s/bnk-prerequisites",
-        "from_output": "manifest_version"
+        "from_output": "manifest_version",
+        "default": "2.4.1-3.2850.1-0.0.9"
       },
       {
         "name": "far_secret_name",

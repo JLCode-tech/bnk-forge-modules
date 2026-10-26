@@ -39,13 +39,13 @@ variable "create_namespace" {
 # =============================================================================
 
 variable "cert_manager_version" {
-  description = "Version of Jetstack cert-manager to deploy. F5 BNK 2.2 GA tested with v1.16.1"
+  description = "Version of Jetstack cert-manager to deploy. F5 BNK 2.4.1 GA tested with v1.16.2"
   type        = string
-  default     = "v1.16.1"
+  default     = "v1.16.2"
 
   validation {
     condition     = can(regex("^v?[0-9]+\\.[0-9]+\\.[0-9]+", var.cert_manager_version))
-    error_message = "The cert_manager_version must be a valid semantic version (e.g., v1.16.1)."
+    error_message = "The cert_manager_version must be a valid semantic version (e.g., v1.16.2)."
   }
 }
 

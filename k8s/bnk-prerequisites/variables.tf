@@ -65,9 +65,9 @@ variable "instance_namespace" {
 # =============================================================================
 
 variable "bnk_manifest_version" {
-  description = "BNK manifest version to download from FAR (e.g., 2.2.1-3.2226.0-0.0.511)"
+  description = "BNK manifest version to download from FAR (e.g., 2.4.1-3.2850.1-0.0.9)"
   type        = string
-  default     = "2.2.1-3.2226.0-0.0.511"
+  default     = "2.4.1-3.2850.1-0.0.9"
 
   validation {
     condition     = can(regex("^[0-9]+\\.[0-9]+\\.[0-9]+-", var.bnk_manifest_version))

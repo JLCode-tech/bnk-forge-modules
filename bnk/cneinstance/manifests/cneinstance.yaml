@@ -106,3 +106,34 @@ spec:
         - name: PCIDEVICE_INTEL_COM_ETH2
           value: "${internal_pci_bus_id | default("0000:00:08.0")}"
 {% endif %}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: f5-cne-controller-endpointslices-get
+  labels:
+    app.kubernetes.io/name: ${instance_name}
+    app.kubernetes.io/component: cne-controller-rbac
+    app.kubernetes.io/managed-by: bnk-forge
+rules:
+  - apiGroups: ["discovery.k8s.io"]
+    resources: ["endpointslices"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: f5-cne-controller-endpointslices-get
+  labels:
+    app.kubernetes.io/name: ${instance_name}
+    app.kubernetes.io/component: cne-controller-rbac
+    app.kubernetes.io/managed-by: bnk-forge
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: f5-cne-controller-endpointslices-get
+subjects:
+  - kind: ServiceAccount
+    name: f5-cne-controller
+    namespace: ${instance_namespace}
+

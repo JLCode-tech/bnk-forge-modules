@@ -1,0 +1,113 @@
+{
+  "schema_version": "catalog-release/v1alpha2",
+  "release": {
+    "channel": "release/2.4.1",
+    "name": "BNK 2.4.1 Official Baseline",
+    "source_kind": "official",
+    "execution_engine": "opentofu"
+  },
+  "contract": {
+    "metadata_version": "module-metadata/v2alpha1"
+  },
+  "official_modules": [
+    {
+      "path": "k8s/bnk-prerequisites",
+      "version": "1.1.0",
+      "state": "active",
+      "execution": {
+        "deploy_models": ["terraform", "kubernetes_manifest", "shell"]
+      }
+    },
+    {
+      "path": "k8s/cert-manager",
+      "version": "3.2.0",
+      "state": "active",
+      "execution": {
+        "deploy_models": ["terraform", "helm", "kubernetes_manifest"]
+      }
+    },
+    {
+      "path": "k8s/bnk-cert-issuer",
+      "version": "1.0.0",
+      "state": "active",
+      "execution": {
+        "engine": "kubernetes",
+        "deploy_models": ["kubernetes_manifest"]
+      }
+    },
+    {
+      "path": "k8s/network-setup",
+      "version": "2.0.0",
+      "state": "active",
+      "execution": {
+        "deploy_models": ["terraform", "kubernetes_manifest"]
+      }
+    },
+    {
+      "path": "k8s/bnk-namespaces",
+      "version": "2.0.0",
+      "state": "deprecated",
+      "reason": "Superseded by k8s/bnk-prerequisites in release/2.2+"
+    },
+    {
+      "path": "bnk/flo",
+      "version": "2.1.0",
+      "state": "active",
+      "execution": {
+        "deploy_models": ["terraform", "helm", "kubernetes_manifest", "shell"]
+      }
+    },
+    {
+      "path": "bnk/cneinstance",
+      "version": "2.1.0",
+      "state": "active",
+      "execution": {
+        "deploy_models": ["terraform", "kubernetes_manifest"]
+      }
+    },
+    {
+      "path": "bnk/bnk-gatewayclass",
+      "version": "2.1.0",
+      "state": "active",
+      "execution": {
+        "deploy_models": ["terraform", "kubernetes_manifest"]
+      }
+    },
+    {
+      "path": "bnk/bnk-vlans",
+      "state": "legacy",
+      "reason": "Not yet migrated to module-metadata/v2alpha1"
+    },
+    {
+      "path": "bnk/bnk-gateway-ext",
+      "state": "legacy",
+      "reason": "Not yet migrated to module-metadata/v2alpha1"
+    },
+    {
+      "path": "bnk/gateway",
+      "state": "legacy",
+      "reason": "Not yet migrated to module-metadata/v2alpha1"
+    },
+    {
+      "path": "bnk/routes",
+      "state": "legacy",
+      "reason": "Not yet migrated to module-metadata/v2alpha1"
+    },
+    {
+      "path": "bnk/bnk-netpolicy",
+      "state": "legacy",
+      "reason": "Not yet migrated to module-metadata/v2alpha1"
+    },
+    {
+      "path": "bnk/bnk-secpolicy",
+      "state": "legacy",
+      "reason": "Not yet migrated to module-metadata/v2alpha1"
+    },
+    {
+      "path": "bnk/far-setup",
+      "version": "2.0.0",
+      "state": "deprecated",
+      "reason": "Legacy path; use k8s/bnk-prerequisites"
+    }
+  ]
+}

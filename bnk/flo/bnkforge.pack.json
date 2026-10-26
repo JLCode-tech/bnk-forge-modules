@@ -3,7 +3,7 @@
   "module": {
     "name": "F5 Lifecycle Operator (FLO)",
     "path": "bnk/flo",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "category": "bnk",
     "description": "Deploys F5 Lifecycle Operator from F5 OCI Helm registry with BNK licensing and certificate wiring values."
   },
@@ -58,7 +58,8 @@
         "description": "FLO Helm chart version",
         "source": "module",
         "from_module": "k8s/bnk-prerequisites",
-        "from_output": "flo_version"
+        "from_output": "flo_version",
+        "default": "v2.30.1-0.0.8"
       },
       {
         "name": "far_secret_name",

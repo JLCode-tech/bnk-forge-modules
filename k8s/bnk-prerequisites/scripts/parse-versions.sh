@@ -28,15 +28,46 @@ fi
 
 log "Extracting component versions..."
 
-# Parse manifest file once into an associative array
-# This replaces multiple calls to grep/awk which spawned dozens of processes.
-# Performance improvement: ~17x faster in benchmarks.
-declare -A versions
+cert_manager=""
+flo=""
+rabbitmq=""
+cwc=""
+spk_crds_common=""
+spk_crds_service_proxy=""
+spk_crds_deprecated=""
+f5ingress=""
+crd_conversion=""
+fluentd=""
+dssm=""
+observer=""
+ipam_controller=""
+license_proxy=""
+tmm_img=""
+f5ingress_img=""
+spk_cwc_img=""
 
 # We use awk to find 'name:' followed by 'version:' on the next line
 # The logic strictly mimics 'grep -A1 "name: ..." | grep "version:"'
 while read -r key value; do
-    versions["$key"]="$value"
+    case "$key" in
+        "charts/f5-cert-manager") cert_manager="$value" ;;
+        "charts/f5-lifecycle-operator") flo="$value" ;;
+        "charts/rabbitmq") rabbitmq="$value" ;;
+        "charts/cwc") cwc="$value" ;;
+        "charts/f5-spk-crds-common") spk_crds_common="$value" ;;
+        "charts/f5-spk-crds-service-proxy") spk_crds_service_proxy="$value" ;;
+        "charts/f5-spk-crds-deprecated") spk_crds_deprecated="$value" ;;
+        "charts/f5ingress") f5ingress="$value" ;;
+        "charts/f5-crdconversion") crd_conversion="$value" ;;
+        "charts/f5-toda-fluentd") fluentd="$value" ;;
+        "charts/f5-dssm") dssm="$value" ;;
+        "charts/f5-toda-observer") observer="$value" ;;
+        "charts/f5-ipam-controller") ipam_controller="$value" ;;
+        "charts/f5-license-proxy") license_proxy="$value" ;;
+        "images/tmm-img") tmm_img="$value" ;;
+        "images/f5ingress") f5ingress_img="$value" ;;
+        "images/spk-cwc") spk_cwc_img="$value" ;;
+    esac
 done < <(awk '
     /name:/ {
         for (i=1; i<=NF; i++) {
@@ -63,33 +94,10 @@ done < <(awk '
     { found_key = 0; key = "" }
 ' "$MANIFEST_FILE")
 
-# Extract Helm chart versions using the map
-# Use ${versions[key]-} to avoid "unbound variable" error if key is missing (returns empty string)
-cert_manager=${versions["charts/f5-cert-manager"]-}
-flo=${versions["charts/f5-lifecycle-operator"]-}
-rabbitmq=${versions["charts/rabbitmq"]-}
-cwc=${versions["charts/cwc"]-}
-spk_crds_common=${versions["charts/f5-spk-crds-common"]-}
-spk_crds_service_proxy=${versions["charts/f5-spk-crds-service-proxy"]-}
-spk_crds_deprecated=${versions["charts/f5-spk-crds-deprecated"]-}
-f5ingress=${versions["charts/f5ingress"]-}
-crd_conversion=${versions["charts/f5-crdconversion"]-}
-fluentd=${versions["charts/f5-toda-fluentd"]-}
-dssm=${versions["charts/f5-dssm"]-}
-observer=${versions["charts/f5-toda-observer"]-}
-ipam_controller=${versions["charts/f5-ipam-controller"]-}
-license_proxy=${versions["charts/f5-license-proxy"]-}
-
-# Extract key Docker image versions (for reference)
-tmm_img=${versions["images/tmm-img"]-}
-f5ingress_img=${versions["images/f5ingress"]-}
-spk_cwc_img=${versions["images/spk-cwc"]-}
-
-# Validate that critical components were found
+# Validate that critical components were found (charts/f5-cert-manager is absent in BNK 2.4+)
 log "Validating critical component versions..."
 critical_missing=""
 
-[ -z "$cert_manager" ] && critical_missing="$critical_missing cert_manager"
 [ -z "$flo" ] && critical_missing="$critical_missing flo"
 
 if [ -n "$critical_missing" ]; then

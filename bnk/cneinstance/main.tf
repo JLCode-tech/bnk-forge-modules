@@ -444,13 +444,74 @@ resource "null_resource" "cneinstance" {
 }
 
 # =============================================================================
+# BNK 2.4.1 CNE CONTROLLER ENDPOINTSLICES RBAC
+# =============================================================================
+# BNK 2.4.1's f5-cne-controller invokes single-resource GET on
+# discovery.k8s.io/v1 endpointslices (upstream chart only grants list/watch).
+# Grant get/list/watch on endpointslices so GatewayClass and Gateway reconcile.
+
+resource "null_resource" "cne_controller_endpointslices_rbac" {
+  depends_on = [null_resource.cneinstance]
+
+  triggers = {
+    namespace  = var.instance_namespace
+    kubeconfig = local_file.kubeconfig.filename
+    always_run = timestamp()
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "=== Applying f5-cne-controller-endpointslices-get RBAC ==="
+      cat <<'RBAC' | ${local.kubectl} apply -f -
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: f5-cne-controller-endpointslices-get
+  labels:
+    app.kubernetes.io/managed-by: bnk-forge
+rules:
+  - apiGroups: ["discovery.k8s.io"]
+    resources: ["endpointslices"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: f5-cne-controller-endpointslices-get
+  labels:
+    app.kubernetes.io/managed-by: bnk-forge
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: f5-cne-controller-endpointslices-get
+subjects:
+  - kind: ServiceAccount
+    name: f5-cne-controller
+    namespace: ${var.instance_namespace}
+RBAC
+    EOT
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      kubectl --kubeconfig ${self.triggers.kubeconfig} delete clusterrolebinding f5-cne-controller-endpointslices-get --ignore-not-found 2>/dev/null || true
+      kubectl --kubeconfig ${self.triggers.kubeconfig} delete clusterrole f5-cne-controller-endpointslices-get --ignore-not-found 2>/dev/null || true
+    EOT
+  }
+}
+
+# =============================================================================
 # WAIT FOR CNEInstance TO BECOME AVAILABLE
 # =============================================================================
 # FLO sees the CNEInstance CR and starts deploying components.
 # This takes several minutes. We wait for Available=True condition.
 
 resource "null_resource" "wait_for_available" {
-  depends_on = [null_resource.cneinstance]
+  depends_on = [
+    null_resource.cneinstance,
+    null_resource.cne_controller_endpointslices_rbac,
+  ]
 
   provisioner "local-exec" {
     command = <<-EOT

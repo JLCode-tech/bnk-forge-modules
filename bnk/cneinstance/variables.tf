@@ -46,7 +46,7 @@ variable "instance_namespace" {
 variable "manifest_version" {
   description = "BNK manifest version (wired from prerequisites.manifest_version)"
   type        = string
-  default     = "2.2.1-3.2226.0-0.0.511"
+  default     = "2.4.1-3.2850.1-0.0.9"
 }
 
 variable "far_secret_name" {

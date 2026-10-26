@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-RELEASE_MANIFEST = REPO_ROOT / "catalog" / "releases" / "release-2.2-official.json"
+RELEASE_MANIFEST = REPO_ROOT / "catalog" / "releases" / "release-2.4.1-official.json"
 ALLOWED_DEPLOY_MODELS = {"terraform", "helm", "kubernetes_manifest", "shell"}
 ALLOWED_INPUT_SOURCES = {"user", "module", "auto", "project_secret"}
 ALLOWED_RELEASE_STATES = {"active", "legacy", "deprecated"}
@@ -52,11 +52,17 @@ def validate_generic_module_contract(module_path: str, module_json: dict) -> lis
 
         deploy_models = execution.get("deploy_models")
         if not isinstance(deploy_models, list) or not deploy_models:
-            errors.append(f"{module_path}: execution.deploy_models must be a non-empty array")
+            errors.append(
+                f"{module_path}: execution.deploy_models must be a non-empty array"
+            )
         else:
-            invalid = [model for model in deploy_models if model not in ALLOWED_DEPLOY_MODELS]
+            invalid = [
+                model for model in deploy_models if model not in ALLOWED_DEPLOY_MODELS
+            ]
             if invalid:
-                errors.append(f"{module_path}: invalid deploy model(s): {', '.join(invalid)}")
+                errors.append(
+                    f"{module_path}: invalid deploy model(s): {', '.join(invalid)}"
+                )
 
     contract = module_json.get("contract")
     if not isinstance(contract, dict):
@@ -64,7 +70,9 @@ def validate_generic_module_contract(module_path: str, module_json: dict) -> lis
     else:
         metadata_version = contract.get("metadata_version")
         if not isinstance(metadata_version, str) or not metadata_version:
-            errors.append(f"{module_path}: contract.metadata_version must be a non-empty string")
+            errors.append(
+                f"{module_path}: contract.metadata_version must be a non-empty string"
+            )
 
     inputs = module_json.get("inputs", {})
     all_inputs = []
@@ -92,17 +100,22 @@ def validate_release_manifest(manifest: dict) -> list[str]:
     errors: list[str] = []
 
     if manifest.get("schema_version") != "catalog-release/v1alpha2":
-        errors.append("release manifest schema_version must be catalog-release/v1alpha2")
+        errors.append(
+            "release manifest schema_version must be catalog-release/v1alpha2"
+        )
 
     release = manifest.get("release", {})
-    if release.get("channel") != "release/2.2":
-        errors.append("release.channel must be release/2.2")
+    if release.get("channel") != "release/2.4.1":
+        errors.append("release.channel must be release/2.4.1")
     if release.get("source_kind") != "official":
         errors.append("release.source_kind must be official")
     if release.get("execution_engine") != "opentofu":
         errors.append("release.execution_engine must be opentofu")
 
-    if manifest.get("contract", {}).get("metadata_version") != "module-metadata/v2alpha1":
+    if (
+        manifest.get("contract", {}).get("metadata_version")
+        != "module-metadata/v2alpha1"
+    ):
         errors.append("contract.metadata_version must be module-metadata/v2alpha1")
 
     official_modules = manifest.get("official_modules")
@@ -112,13 +125,17 @@ def validate_release_manifest(manifest: dict) -> list[str]:
     return errors
 
 
-def validate_release_module_entry(entry: dict, module_json: dict, manifest: dict) -> list[str]:
+def validate_release_module_entry(
+    entry: dict, module_json: dict, manifest: dict
+) -> list[str]:
     errors: list[str] = []
     module_path = entry.get("path", "<unknown>")
 
     state = entry.get("state")
     if state not in ALLOWED_RELEASE_STATES:
-        errors.append(f"{module_path}: state must be one of {sorted(ALLOWED_RELEASE_STATES)}")
+        errors.append(
+            f"{module_path}: state must be one of {sorted(ALLOWED_RELEASE_STATES)}"
+        )
         return errors
 
     if state in {"legacy", "deprecated"}:
@@ -130,9 +147,13 @@ def validate_release_module_entry(entry: dict, module_json: dict, manifest: dict
     source = module_json.get("source", {})
     release = manifest.get("release", {})
     if source.get("kind") != release.get("source_kind"):
-        errors.append(f"{module_path}: source.kind must match release.source_kind ({release.get('source_kind')})")
+        errors.append(
+            f"{module_path}: source.kind must match release.source_kind ({release.get('source_kind')})"
+        )
     if source.get("channel") != release.get("channel"):
-        errors.append(f"{module_path}: source.channel must match release.channel ({release.get('channel')})")
+        errors.append(
+            f"{module_path}: source.channel must match release.channel ({release.get('channel')})"
+        )
 
     execution = module_json.get("execution", {})
     entry_engine = entry.get("execution", {}).get("engine")
@@ -144,7 +165,9 @@ def validate_release_module_entry(entry: dict, module_json: dict, manifest: dict
 
     expected_deploy_models = entry.get("execution", {}).get("deploy_models")
     if not isinstance(expected_deploy_models, list) or not expected_deploy_models:
-        errors.append(f"{module_path}: active module requires execution.deploy_models in release manifest")
+        errors.append(
+            f"{module_path}: active module requires execution.deploy_models in release manifest"
+        )
         return errors
 
     deploy_models = execution.get("deploy_models")
@@ -195,7 +218,9 @@ def main() -> None:
         if not family_root.exists():
             continue
         for module_file in family_root.rglob("module.json"):
-            discovered_official_paths.add(str(module_file.parent.relative_to(REPO_ROOT)))
+            discovered_official_paths.add(
+                str(module_file.parent.relative_to(REPO_ROOT))
+            )
 
     missing_from_manifest = sorted(discovered_official_paths - seen_paths)
     if missing_from_manifest:
@@ -210,7 +235,9 @@ def main() -> None:
         sys.exit(1)
 
     print("OK: generic module contract validation passed for active official modules")
-    print("OK: release baseline assertions passed (release/2.2 official catalog manifest)")
+    print(
+        "OK: release baseline assertions passed (release/2.4.1 official catalog manifest)"
+    )
 
 
 if __name__ == "__main__":

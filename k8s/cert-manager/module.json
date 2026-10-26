@@ -2,16 +2,16 @@
   "module": {
     "name": "Cert-Manager (Jetstack)",
     "path": "k8s/cert-manager",
-    "version": "3.1.0",
+    "version": "3.2.0",
     "layer": "kubernetes",
     "category": "security",
-    "description": "Deploys Jetstack cert-manager v1.16.1 with self-signed ClusterIssuer and OTEL telemetry certs for BNK. Uses kubectl apply for CRD resources to avoid plan-time dependency on CRDs. CRDs are cleaned up on destroy to prevent stale webhook bootstrap deadlocks.",
+    "description": "Deploys Jetstack cert-manager v1.16.2 with self-signed ClusterIssuer and OTEL telemetry certs for BNK. Uses kubectl apply for CRD resources to avoid plan-time dependency on CRDs. CRDs are cleaned up on destroy to prevent stale webhook bootstrap deadlocks.",
     "cloud_specific": false,
     "supported_platforms": ["any"]
   },
   "source": {
     "kind": "official",
-    "channel": "release/2.2"
+    "channel": "release/2.4.1"
   },
   "execution": {
     "engine": "opentofu",
@@ -49,8 +49,8 @@
       {
         "name": "cert_manager_version",
         "type": "string",
-        "description": "Jetstack cert-manager version (F5 tested v1.16.1)",
-        "default": "v1.16.1",
+        "description": "Jetstack cert-manager version (F5 tested v1.16.2)",
+        "default": "v1.16.2",
         "source": "user"
       },
       {

@@ -11,7 +11,7 @@
   },
   "source": {
     "kind": "official",
-    "channel": "release/2.2"
+    "channel": "release/2.4.1"
   },
   "execution": {
     "engine": "kubernetes",
