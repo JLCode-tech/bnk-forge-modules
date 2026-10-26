@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "module": {
+    "name": "BNK VLANs",
+    "path": "bnk/bnk-vlans",
+    "version": "1.0.0",
+    "category": "bnk",
+    "description": "F5SPKVlan CRs for BNK TMM data-plane self IPs. TMM configures these IPs on its raw L2 interfaces (NADs have NO IPAM). On AWS, also registers secondary IPs on ENIs."
+  },
+  "deployment_pack": {
+    "engine": "opentofu",
+    "runner_profile": "opentofu-default",
+    "working_directory": ".",
+    "entrypoints": {
+      "module_root": "."
+    },
+    "lifecycle": {
+      "supports_init": true,
+      "supports_plan": true,
+      "supports_apply": true,
+      "supports_destroy": true,
+      "supports_refresh": true,
+      "supports_drift": true
+    }
+  },
+  "dependencies": {
+    "required": [
+      {
+        "module": "bnk/flo",
+        "reason": "FLO must be running to install F5SPKVlan CRDs (module waits for CRD at apply time)"
+      },
+      {
+        "module": "k8s/network-setup",
+        "reason": "NADs must exist before VLANs reference the same interfaces"
+      }
+    ],
+    "optional": []
+  },
+  "inputs": {
+    "required": [],
+    "optional": [
+      {
+        "name": "cluster_name",
+        "type": "string",
+        "description": "Name of the Kubernetes cluster",
+        "default": "",
+        "source": "auto"
+      },
+      {
+        "name": "namespace",
+        "type": "string",
+        "description": "Namespace where BNK components are deployed",
+        "default": "f5-operator",
+        "source": "module",
+        "from_module": "k8s/bnk-prerequisites",
+        "from_output": "operator_namespace"
+      },
+      {
+        "name": "external_subnet_cidrs",
+        "type": "list(string)",
+        "description": "External DPDK subnet CIDRs. Wired from VPC module outputs.",
+        "source": "module",
+        "from_module": "infra/aws/vpc",
+        "from_output": "private_external_subnet_cidrs",
+        "default": [
+          "10.0.10.0/24"
+        ]
+      },
+      {
+        "name": "internal_subnet_cidrs",
+        "type": "list(string)",
+        "description": "Internal DPDK subnet CIDRs. Wired from VPC module outputs.",
+        "source": "module",
+        "from_module": "infra/aws/vpc",
+        "from_output": "private_internal_subnet_cidrs",
+        "default": [
+          "10.0.20.0/24"
+        ]
+      },
+      {
+        "name": "internal_subnet_id",
+        "type": "string",
+        "description": "Internal subnet ID for discovering the internal ENI on the HP node.",
+        "source": "module",
+        "from_module": "infra/aws/vpc",
+        "from_output": "private_internal_subnet_ids[0]",
+        "default": ""
+      },
+      {
+        "name": "external_self_ips",
+        "type": "list(string)",
+        "description": "External self IPs for TMM VLANs. If empty, auto-derived from external subnet CIDR (.240).",
+        "default": [],
+        "source": "user"
+      },
+      {
+        "name": "internal_self_ips",
+        "type": "list(string)",
+        "description": "Internal self IPs for TMM VLANs. If empty, auto-derived from internal subnet CIDR (.240).",
+        "default": [],
+        "source": "user"
+      },
+      {
+        "name": "mtu",
+        "type": "number",
+        "description": "MTU for VLAN interfaces (should match TMM_DEFAULT_MTU)",
+        "default": 9000,
+        "source": "user"
+      },
+      {
+        "name": "auto_lasthop",
+        "type": "string",
+        "description": "Auto last-hop setting. Set to AUTO_LASTHOP_ENABLED on AWS/Azure to prevent asymmetric routing.",
+        "default": "",
+        "source": "user"
+      },
+      {
+        "name": "aws_region",
+        "type": "string",
+        "description": "AWS region for ENI secondary IP registration. Empty disables ENI management.",
+        "default": "",
+        "source": "auto"
+      },
+      {
+        "name": "gateway_vips",
+        "type": "list(string)",
+        "description": "Gateway VIP addresses to register as secondary IPs on the external ENI.",
+        "default": [],
+        "source": "user"
+      },
+      {
+        "name": "flo_ready",
+        "type": "boolean",
+        "description": "Gate from FLO module \u2014 ensures FLO is running and will install CRDs",
+        "default": true,
+        "source": "module",
+        "from_module": "bnk/flo",
+        "from_output": "flo_ready"
+      }
+    ]
+  },
+  "outputs": {
+    "key_outputs": [
+      {
+        "name": "external_self_ips",
+        "type": "list(string)",
+        "description": "External VLAN self IPs",
+        "sensitive": false
+      },
+      {
+        "name": "internal_self_ips",
+        "type": "list(string)",
+        "description": "Internal VLAN self IPs",
+        "sensitive": false
+      },
+      {
+        "name": "vlans_ready",
+        "type": "boolean",
+        "description": "Flag indicating VLAN CRs have been applied",
+        "used_by": [
+          "bnk/bnk-gatewayclass"
+        ],
+        "sensitive": false
+      }
+    ]
+  }
+}

@@ -15,7 +15,11 @@
       "version": "1.0.0",
       "state": "active",
       "execution": {
-        "deploy_models": ["terraform", "kubernetes_manifest", "shell"]
+        "deploy_models": [
+          "terraform",
+          "kubernetes_manifest",
+          "shell"
+        ]
       }
     },
     {
@@ -23,7 +27,11 @@
       "version": "3.1.0",
       "state": "active",
       "execution": {
-        "deploy_models": ["terraform", "helm", "kubernetes_manifest"]
+        "deploy_models": [
+          "terraform",
+          "helm",
+          "kubernetes_manifest"
+        ]
       }
     },
     {
@@ -32,7 +40,9 @@
       "state": "active",
       "execution": {
         "engine": "kubernetes",
-        "deploy_models": ["kubernetes_manifest"]
+        "deploy_models": [
+          "kubernetes_manifest"
+        ]
       }
     },
     {
@@ -40,7 +50,10 @@
       "version": "2.0.0",
       "state": "active",
       "execution": {
-        "deploy_models": ["terraform", "kubernetes_manifest"]
+        "deploy_models": [
+          "terraform",
+          "kubernetes_manifest"
+        ]
       }
     },
     {
@@ -54,7 +67,12 @@
       "version": "2.0.0",
       "state": "active",
       "execution": {
-        "deploy_models": ["terraform", "helm", "kubernetes_manifest", "shell"]
+        "deploy_models": [
+          "terraform",
+          "helm",
+          "kubernetes_manifest",
+          "shell"
+        ]
       }
     },
     {
@@ -62,7 +80,10 @@
       "version": "2.0.0",
       "state": "active",
       "execution": {
-        "deploy_models": ["terraform", "kubernetes_manifest"]
+        "deploy_models": [
+          "terraform",
+          "kubernetes_manifest"
+        ]
       }
     },
     {
@@ -70,13 +91,23 @@
       "version": "2.1.0",
       "state": "active",
       "execution": {
-        "deploy_models": ["terraform", "kubernetes_manifest"]
+        "deploy_models": [
+          "terraform",
+          "kubernetes_manifest"
+        ]
       }
     },
     {
       "path": "bnk/bnk-vlans",
-      "state": "legacy",
-      "reason": "Not yet migrated to module-metadata/v2alpha1"
+      "version": "1.0.0",
+      "state": "active",
+      "execution": {
+        "deploy_models": [
+          "terraform",
+          "kubernetes_manifest",
+          "shell"
+        ]
+      }
     },
     {
       "path": "bnk/bnk-gateway-ext",
