@@ -246,6 +246,21 @@ resource "null_resource" "register_eni_secondary_ips" {
 
       echo "HP node instance: $INSTANCE_ID"
 
+      # --- Primary ENI (device-index 0): disable source/dest check for pod-to-VIP and return traffic ---
+      PRIMARY_ENI=$(aws ec2 describe-network-interfaces \
+        --region ${var.aws_region} \
+        --filters "Name=attachment.instance-id,Values=$INSTANCE_ID" \
+                  "Name=attachment.device-index,Values=0" \
+        --query 'NetworkInterfaces[0].NetworkInterfaceId' \
+        --output text 2>/dev/null)
+      if [ -n "$PRIMARY_ENI" ] && [ "$PRIMARY_ENI" != "None" ]; then
+        aws ec2 modify-network-interface-attribute \
+          --region ${var.aws_region} \
+          --network-interface-id "$PRIMARY_ENI" \
+          --no-source-dest-check 2>&1 || true
+        echo "Primary ENI ($PRIMARY_ENI) source/dest check disabled"
+      fi
+
       # --- External ENI: find by tag ENIType=external-dpdk ---
       EXT_ENI=$(aws ec2 describe-network-interfaces \
         --region ${var.aws_region} \
