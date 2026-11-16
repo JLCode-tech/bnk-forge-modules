@@ -114,8 +114,8 @@ resource "kubernetes_manifest" "token_hsl_standard_netpolicy" {
   ]
 
   manifest = {
-    apiVersion = "gateway.k8s.f5net.com/v1alpha1"
-    kind       = "BNKNetPolicy"
+    apiVersion = "gateway.k8s.f5.com/v1alpha1"
+    kind       = "NetPolicy"
 
     metadata = {
       name      = "token-hsl-standard-netpolicy"
@@ -160,8 +160,8 @@ resource "kubernetes_manifest" "smart_combined_netpolicy" {
   ]
 
   manifest = {
-    apiVersion = "gateway.k8s.f5net.com/v1alpha1"
-    kind       = "BNKNetPolicy"
+    apiVersion = "gateway.k8s.f5.com/v1alpha1"
+    kind       = "NetPolicy"
 
     metadata = {
       name      = "smart-combined-netpolicy"

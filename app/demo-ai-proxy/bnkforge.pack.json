@@ -151,27 +151,32 @@
       {
         "name": "litellm_service_name",
         "type": "string",
-        "description": "Name of the LiteLLM proxy service"
+        "description": "Name of the LiteLLM proxy service",
+        "value": "litellm-proxy"
       },
       {
         "name": "litellm_service_port",
         "type": "number",
-        "description": "Port of the LiteLLM proxy service"
+        "description": "Port of the LiteLLM proxy service",
+        "value": 4000
       },
       {
         "name": "prometheus_service_name",
         "type": "string",
-        "description": "Name of the Prometheus service"
+        "description": "Name of the Prometheus service",
+        "value": "prometheus-service"
       },
       {
         "name": "prometheus_endpoint",
         "type": "string",
-        "description": "Full Prometheus endpoint URL"
+        "description": "Full Prometheus endpoint URL",
+        "value": "http://prometheus-service.${app_namespace}.svc.cluster.local:9090"
       },
       {
         "name": "ai_route_name",
         "type": "string",
-        "description": "Name of the AI HTTPRoute (if created)"
+        "description": "Name of the AI HTTPRoute (if created)",
+        "value": "ai-chat-route"
       },
       {
         "name": "ai_proxy_ready",

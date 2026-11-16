@@ -1,5 +1,5 @@
-apiVersion: gateway.k8s.f5net.com/v1alpha1
-kind: BNKNetPolicy
+apiVersion: gateway.k8s.f5.com/v1alpha1
+kind: NetPolicy
 metadata:
   name: smart-combined-netpolicy
   namespace: ${gateway_namespace}
